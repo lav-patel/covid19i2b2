@@ -1,6 +1,8 @@
+set echo on;
 
 --Cleanup scripts if necessary
-/*
+
+WHENEVER SQLERROR CONTINUE;
   drop table covid_config;
   drop table covid_code_map;
   drop table covid_lab_map;
@@ -17,7 +19,8 @@
   drop table covid_labs;
   drop table covid_medications;
   drop table covid_diagnoses;
-*/
+WHENEVER SQLERROR EXIT SQL.SQLCODE;
+
 --------------------------------------------------------------------------------
 -- General settings
 --------------------------------------------------------------------------------
@@ -39,7 +42,7 @@ create table covid_config (
 	output_as_csv number(1) -- Return the data in tables with a single column containing comma separated values
 );
 insert into COVID_CONFIG
-	select 'YOUR_ID', -- siteid
+	select 'KUMC', -- siteid
 		1, -- include_race
 		0, -- race_in_fact_table
 		0, -- hispanic_in_fact_table
