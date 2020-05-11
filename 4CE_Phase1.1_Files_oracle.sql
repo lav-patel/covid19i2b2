@@ -44,13 +44,13 @@ create table covid_config (
 insert into COVID_CONFIG
 	select 'KUMC', -- siteid
 		1, -- include_race
-		0, -- race_in_fact_table
-		0, -- hispanic_in_fact_table
+		1, -- race_in_fact_table
+		1, -- hispanic_in_fact_table
 		1, -- death_data_accurate
-		'DIAG|ICD9:', -- code_prefix_icd9cm
-		'DIAG|ICD10:', -- code_prefix_icd10cm
-		'PROC|ICD9:', -- code_prefix_icd9proc
-		'PROC|ICD10:', -- code_prefix_icd10pcs
+		'ICD9:', -- code_prefix_icd9cm
+		'ICD10:', -- code_prefix_icd10cm --select concept_cd from  Nightherondata.concept_dimension   where concept_path like '\i2b2\Diagnoses\ICD10\A20098492\A20160670\A18924177\%'
+		'ICD9:', -- code_prefix_icd9proc -- select concept_cd from  Nightherondata.CONCEPT_DIMENSION   where concept_path LIKE '\PCORI\PROCEDURE\09\(08-16.99) Ope~jf1y\(15) Operation~pru9\%';
+		'ICD10:', -- code_prefix_icd10pcs --select concept_cd from  Nightherondata.CONCEPT_DIMENSION   where concept_path LIKE '\PCORI\PROCEDURE\10\(4) Measuremen~ge9w\(4A) Measureme~dxgz\(4A1) Measurem~49bf\(4A13) Measure~djxw\%';
 		0, -- obfuscation_blur
 		10, -- obfuscation_small_count_mask
 		0, -- obfuscation_small_count_delete
