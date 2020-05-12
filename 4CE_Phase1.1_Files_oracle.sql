@@ -62,7 +62,7 @@ commit;
 -- ! If your ICD codes do not start with a prefix (e.g., "ICD:"), then you will
 -- ! need to customize the query that populates the covid_diagnoses table so that
 -- ! only diagnosis codes are selected from the observation_fact table.
-
+-- TODO: what if diag and proc same prefix?
 --------------------------------------------------------------------------------
 -- Code mappings (excluding labs and meds)
 -- * Don't change the "code" value.
@@ -77,57 +77,55 @@ create table COVID_CODE_MAP (
 
 -- Inpatient visits (visit_dimension.inout_cd)
 insert into  COVID_CODE_MAP
-	select 'inpatient', 'I' from dual
-        union all 
-    select 'inpatient', 'IN' from dual;
+	select 'inpatient', 'I' from dual -- select distinct inout_cd from nightherondata.visit_dimension;
+--        union all 
+--    select 'inpatient', 'IN' from dual
+;
     --UNC: 'INPATIENT'
 commit;    
 -- Sex (patient_dimension.sex_cd)
 insert into  COVID_CODE_MAP
-	select 'male', 'M' from dual
+	select 'male', 'm' from dual
         union all 
-    select 'male', 'Male' from dual
-        union all 
-    select 'female', 'F' from dual
-        union all 
-    select 'female', 'Female' from dual;
+--    select 'male', 'Male' from dual
+--        union all 
+    select 'female', 'f' from dual
+--        union all 
+--    select 'female', 'Female' from dual
+    ;
 commit;    
 -- Race (field based on covid_config.race_in_fact_table; ignore if you don't collect race/ethnicity)
 insert into  COVID_CODE_MAP
-	select 'american_indian', 'NA' from dual
+	select 'american_indian', 'DEM|RACE:amerian ind' from dual
         union all 
-    select 'asian', 'A' from dual
+    select 'asian', 'DEM|RACE:asian' from dual
         union all 
-    select 'asian', 'AS' from dual
+    select 'black', 'DEM|RACE:black' from dual
         union all 
-    select 'black', 'B' from dual
+    select 'hawaiian_pacific_islander', 'DEM|RACE:pac islander' from dual
         union all 
-    select 'hawaiian_pacific_islander', 'H' from dual
-        union all 
-    select 'hawaiian_pacific_islander', 'P' from dual
-        union all 
-    select 'white', 'W' from dual;
+    select 'white', 'DEM|RACE:white' from dual;
 commit; 
 --UNC: white:'1', islander:'5', black:'2',asian:'4',native:'3'
 
 -- Hispanic/Latino (field based on covid_config.hispanic_in_fact_table; ignore if you don't collect race/ethnicity)
 insert into  COVID_CODE_MAP
-	select 'hispanic_latino', 'DEM|HISP:Y' from dual
+	select 'hispanic_latino', 'DEM|ETHNICITY:hispanic' from dual
         union all 
-    select 'hispanic_latino', 'DEM|HISPANIC:Y' from dual;
+    select 'hispanic_latino', 'DEM|ETHNICITY:his' from dual;
 commit; 
 --UNC: HISP:'2',No:'1'
 
 -- Codes that indicate a positive COVID-19 test result (use either option #1 and/or option #2)
 -- COVID-19 Positive Option #1: individual concept_cd values
 insert into  COVID_CODE_MAP
-	select 'covidpos', 'LOINC:COVID19POS' from dual;
+	select 'covidpos', 'COVID-xyz-test:POSITIVE' from dual;
 commit;
 
 -- COVID-19 Positive Option #2: an ontology path (the example here is the COVID ACT "Any Positive Test" path)
 insert into  COVID_CODE_MAP
 	select distinct 'covidpos', concept_cd
-	from concept_dimension c
+	from nightherondata.concept_dimension c
 	where concept_path like '\ACT\UMLS_C0031437\SNOMED_3947185011\UMLS_C0022885\UMLS_C1335447\%'
 		and concept_cd is not null
 		and not exists (select * from COVID_CODE_MAP m where m.code='covidpos' and m.local_code=c.concept_cd);
