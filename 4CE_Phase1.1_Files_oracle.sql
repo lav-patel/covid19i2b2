@@ -151,60 +151,72 @@ create table COVID_LAB_MAP (
 );
 
 insert into COVID_LAB_MAP
-	select loinc, 'LOINC:'||local_lab_code,  -- Change "LOINC:" to your local LOINC code prefix (scheme)
+	select loinc, 'KUH|COMPONENT_ID:'||local_lab_code,  -- Change "LOINC:" to your local LOINC code prefix (scheme)
 		scale_factor, lab_units, lab_name
 	from (
-		select '6690-2' loinc, '6690-2' local_lab_code, 1 scale_factor, '10*3/uL' lab_units, 'white blood cell count (Leukocytes)' lab_name from dual   
+		select '6690-2' loinc, '3009' local_lab_code, 1 scale_factor, '10*3/uL' lab_units, 'white blood cell count (Leukocytes)' lab_name from dual   
             union 
-        select '6690-2', '12227-5', 1, '10*3/uL', 'white blood cell count (Leukocytes)' from dual
-            union     
-        select '751-8','751-8',1,'10*3/uL','neutrophil count' from dual
+        select '751-8','3012',1,'10*3/uL','neutrophil count' from dual
             union 
-        select '731-0','731-0',1,'10*3/uL','lymphocyte count' from dual
+        select '731-0','3016',1,'10*3/uL','lymphocyte count' from dual
             union 
-        select '1751-7','1752-5',1,'g/dL','albumin' from dual
+        select '1751-7','1',1,'g/dL','albumin' from dual
             union 
-        select '2532-0','2532-0',1,'U/L','lactate dehydrogenase (LDH)' from dual
+        select '1751-7','2023',1,'g/dL','albumin' from dual
             union 
-        select '1742-6','1742-6',1,'U/L','alanine aminotransferase (ALT)' from dual
+        select '1751-7','51066',1,'g/dL','albumin' from dual
             union 
-        select '1920-8','1920-8',1,'U/L','aspartate aminotransferase (AST)' from dual
+        select '2532-0','2070',1,'U/L','lactate dehydrogenase (LDH)' from dual
             union 
-        select '1975-2','1975-2',1,'mg/dL','total bilirubin' from dual
+        select '1742-6','2065',1,'U/L','alanine aminotransferase (ALT)' from dual
             union 
-        select '2160-0','2160-0',1,'mg/dL','creatinine' from dual
+        select '1742-6','51082',1,'U/L','alanine aminotransferase (ALT)' from dual
             union 
-        select '49563-0','49563-0',1,'ng/mL','cardiac troponin (High Sensitivity)' from dual
+        select '1920-8','2064',1,'U/L','aspartate aminotransferase (AST)' from dual
             union 
-        select '6598-7','6598-7',1,'ug/L','cardiac troponin (Normal Sensitivity)' from dual
+        select '1920-8','51154',1,'U/L','aspartate aminotransferase (AST)' from dual
             union 
-        select '6598-7','10839-9',1,'ug/L','cardiac troponin (Normal Sensitivity)' from dual
-            union    
-        select '48065-7','48065-7',1,'ng/mL{FEU}','D-dimer (FEU)' from dual
+        select '1975-2','2024',1,'mg/dL','total bilirubin' from dual
             union 
-        select '48066-5','48066-5',1,'ng/mL{DDU}','D-dimer (DDU)' from dual
+        select '1975-2','52182',1,'mg/dL','total bilirubin' from dual
             union 
-        select '5902-2','5902-2',1,'s','prothrombin time (PT)' from dual
+        select '2160-0','2009',1,'mg/dL','creatinine' from dual
             union 
-        select '33959-8','33959-8',1,'ng/mL','procalcitonin' from dual
+        select '2160-0','51418',1,'mg/dL','creatinine' from dual
             union 
-        select '1988-5','1988-5',1,'mg/L','C-reactive protein (CRP) (Normal Sensitivity)' from dual
+        select '49563-0','2326',1,'ng/mL','cardiac troponin (High Sensitivity)' from dual
             union 
-        select '3255-7','3255-7',1,'mg/dL','Fibrinogen' from dual
+        select '49563-0','2327',1,'ng/mL','cardiac troponin (High Sensitivity)' from dual
             union 
-        select '2276-4','2276-4',1,'ng/mL','Ferritin' from dual
+--        select '6598-7','6598-7',1,'ug/L','cardiac troponin (Normal Sensitivity)' from dual
+--            union 
+--        select '6598-7','10839-9',1,'ug/L','cardiac troponin (Normal Sensitivity)' from dual
+--            union    
+--        select '48065-7','48065-7',1,'ng/mL{FEU}','D-dimer (FEU)' from dual
+--            union 
+--        select '48066-5','48066-5',1,'ng/mL{DDU}','D-dimer (DDU)' from dual
+--            union 
+        select '5902-2','52032',1,'s','prothrombin time (PT)' from dual
             union 
-        select '2019-8','2019-8',1,'mmHg','PaCO2' from dual
+        select '33959-8','664',1,'ng/mL','procalcitonin' from dual
             union 
-        select '2019-8','2021-4',1,'mmHg','PaCO2' from dual
-            union    
-        select '2019-8','2020-6',1,'mmHg','PaCO2' from dual
-            union
-        select '2703-7','2703-7',1,'mmHg','PaO2' from dual
-            union
-        select '2703-7','2705-2',1,'mmHg','PaO2' from dual
-            union
-        select '2703-7','2704-5',1,'mmHg','PaO2' from dual
+        select '1988-5','3186',1,'mg/L','C-reactive protein (CRP) (Normal Sensitivity)' from dual
+--            union 
+--        select '3255-7','3255-7',1,'mg/dL','Fibrinogen' from dual
+--            union 
+--        select '2276-4','2276-4',1,'ng/mL','Ferritin' from dual
+--            union 
+--        select '2019-8','2019-8',1,'mmHg','PaCO2' from dual
+--            union 
+--        select '2019-8','2021-4',1,'mmHg','PaCO2' from dual
+--            union    
+--        select '2019-8','2020-6',1,'mmHg','PaCO2' from dual
+--            union
+--        select '2703-7','2703-7',1,'mmHg','PaO2' from dual
+--            union
+--        select '2703-7','2705-2',1,'mmHg','PaO2' from dual
+--            union
+--        select '2703-7','2704-5',1,'mmHg','PaO2' from dual
 		--union select '2703-7','second-code',1,'mmHg','PaO2'
 		--union select '2703-7','third-code',1,'mmHg','PaO2'
 	) t;
