@@ -219,6 +219,7 @@ insert into COVID_LAB_MAP
 --        select '2703-7','2704-5',1,'mmHg','PaO2' from dual
 		--union select '2703-7','second-code',1,'mmHg','PaO2'
 		--union select '2703-7','third-code',1,'mmHg','PaO2'
+-- TODO: Commented out
 	) t;
 commit;
 
@@ -313,18 +314,18 @@ commit;
 --   and then find all the concepts corresponding to child paths.
 -- WARNING: This query might take several minutes to run. If it is taking more
 --   than an hour, then stop the query and contact us about alternative approaches.
-/*
+-- drop table COVID_MED_PATHS;
 create table COVID_MED_PATHS AS
 select concept_path, concept_cd
-	from concept_dimension
-	where concept_path like '\ACT\Medications\%'
-		and concept_cd in (select concept_cd from observation_fact); 
+	from nightherondata.concept_dimension
+	where concept_path like '\ACT\Medications\MedicationsByVaClass\V2_09302018\%'
+		and concept_cd in (select concept_cd from nightherondata.observation_fact); 
 alter table COVID_MED_PATHS add constraint COVID_MEDPATHS_PK primary key (concept_path);
 alter table COVID_MED_PATHS add med_class varchar(50);
 insert into COVID_MED_PATHS
 	select distinct 'Expand', d.concept_cd, m.med_class
 	from COVID_MED_MAP m
-		inner join concept_dimension c
+		inner join nightherondata.concept_dimension c
 			on m.local_med_code = c.concept_cd
 		inner join COVID_MED_PATHS d
 			on d.concept_path like c.concept_path||'%'
@@ -334,7 +335,7 @@ insert into COVID_MED_PATHS
 		where t.med_class = m.med_class and t.local_med_code = d.concept_cd
 	);
 commit;    
-*/
+
 
 --##############################################################################
 --### Most sites will not have to modify any SQL beyond this point.
