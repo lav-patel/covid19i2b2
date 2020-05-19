@@ -140,6 +140,10 @@ commit;
 -- * Change the scale_factor if you use different units.
 -- * The lab value will be multiplied by the scale_factor
 -- *   to convert from your units to the 4CE units.
+--eye ball it (Danc)
+--select * from COVID_LAB_MAP lm
+--left join dconnolly.counts_by_concept cbc on cbc.concept_cd = lm.local_lab_code
+--order by lm.lab_name, patients desc;
 --------------------------------------------------------------------------------
 create table COVID_LAB_MAP (
 	loinc varchar(20) not null, 
@@ -253,6 +257,7 @@ commit;
 -- * The ATC and RxNorm codes represent the same list of medications.
 -- * Use ATC and/or RxNorm, depending on what your institution uses.
 --------------------------------------------------------------------------------
+--drop table COVID_MED_MAP;
 create table COVID_MED_MAP (
 	med_class varchar(50) not null,
 	code_type varchar(10) not null,
@@ -261,27 +266,28 @@ create table COVID_MED_MAP (
 );
 
 -- ATC codes (optional)
-insert into COVID_MED_MAP
-	select m, 'ATC' t, 'ATC:'||c  -- Change "ATC:" to your local ATC code prefix (scheme)
-	from (
-		-- Don't add or remove drugs
-		select 'ACEI' m, c from (select 'C09AA01' c from dual union select 'C09AA02' from dual union select 'C09AA03' from dual union select 'C09AA04' from dual union select 'C09AA05' from dual union select 'C09AA06' from dual union select 'C09AA07' from dual union select 'C09AA08' from dual union select 'C09AA09' from dual union select 'C09AA10' from dual union select 'C09AA11' from dual union select 'C09AA13' from dual union select 'C09AA15' from dual union select 'C09AA16' from dual) t
-		union select 'ARB', c from (select 'C09CA01' c from dual union select 'C09CA02' from dual union select 'C09CA03' from dual union select 'C09CA04' from dual union select 'C09CA06' from dual union select 'C09CA07' from dual union select 'C09CA08' from dual) t
-		union select 'COAGA', c from (select 'B01AC04' c from dual union select 'B01AC05' from dual union select 'B01AC07' from dual union select 'B01AC10' from dual union select 'B01AC13' from dual union select 'B01AC16' from dual union select 'B01AC17' from dual union select 'B01AC22' from dual union select 'B01AC24' from dual union select 'B01AC25' from dual union select 'B01AC26' from dual) t
-		union select 'COAGB', c from (select 'B01AA01' c from dual union select 'B01AA03' from dual union select 'B01AA04' from dual union select 'B01AA07' from dual union select 'B01AA11' from dual union select 'B01AB01' from dual union select 'B01AB04' from dual union select 'B01AB05' from dual union select 'B01AB06' from dual union select 'B01AB07' from dual union select 'B01AB08' from dual union select 'B01AB10' from dual union select 'B01AB12' from dual union select 'B01AE01' from dual union select 'B01AE02' from dual union select 'B01AE03' from dual union select 'B01AE06' from dual union select 'B01AE07' from dual union select 'B01AF01' from dual union select 'B01AF02' from dual union select 'B01AF03' from dual union select 'B01AF04' from dual union select 'B01AX05' from dual union select 'B01AX07' from dual) t
-		union select 'COVIDVIRAL', c from (select 'J05AE10' c from dual union select 'J05AP01' from dual union select 'J05AR10' from dual) t
-		union select 'DIURETIC', c from (select 'C03CA01' c from dual union select 'C03CA02' from dual union select 'C03CA03' from dual union select 'C03CA04' from dual union select 'C03CB01' from dual union select 'C03CB02' from dual union select 'C03CC01' from dual) t
-		union select 'HCQ', c from (select 'P01BA01' c from dual union select 'P01BA02' from dual) t
-		union select 'ILI', c from (select 'L04AC03' c from dual union select 'L04AC07' from dual union select 'L04AC11' from dual union select 'L04AC14' from dual) t
-		union select 'INTERFERON', c from (select 'L03AB08' c from dual union select 'L03AB11' from dual) t
-		union select 'SIANES', c from (select 'M03AC03' c from dual union select 'M03AC09' from dual union select 'M03AC11' from dual union select 'N01AX03' from dual union select 'N01AX10' from dual union select 'N05CD08' from dual union select 'N05CM18' from dual) t
-		union select 'SICARDIAC', c from (select 'B01AC09' c from dual union select 'C01CA03' from dual union select 'C01CA04' from dual union select 'C01CA06' from dual union select 'C01CA07' from dual union select 'C01CA24' from dual union select 'C01CE02' from dual union select 'C01CX09' from dual union select 'H01BA01' from dual union select 'R07AX01' from dual) t
-	) t;
-commit;    
+-- Use Rxnorm
+--insert into COVID_MED_MAP
+--	select m, 'ATC' t, 'ATC:'||c  -- Change "ATC:" to your local ATC code prefix (scheme)
+--	from (
+--		-- Don't add or remove drugs
+--		select 'ACEI' m, c from (select 'C09AA01' c from dual union select 'C09AA02' from dual union select 'C09AA03' from dual union select 'C09AA04' from dual union select 'C09AA05' from dual union select 'C09AA06' from dual union select 'C09AA07' from dual union select 'C09AA08' from dual union select 'C09AA09' from dual union select 'C09AA10' from dual union select 'C09AA11' from dual union select 'C09AA13' from dual union select 'C09AA15' from dual union select 'C09AA16' from dual) t
+--		union select 'ARB', c from (select 'C09CA01' c from dual union select 'C09CA02' from dual union select 'C09CA03' from dual union select 'C09CA04' from dual union select 'C09CA06' from dual union select 'C09CA07' from dual union select 'C09CA08' from dual) t
+--		union select 'COAGA', c from (select 'B01AC04' c from dual union select 'B01AC05' from dual union select 'B01AC07' from dual union select 'B01AC10' from dual union select 'B01AC13' from dual union select 'B01AC16' from dual union select 'B01AC17' from dual union select 'B01AC22' from dual union select 'B01AC24' from dual union select 'B01AC25' from dual union select 'B01AC26' from dual) t
+--		union select 'COAGB', c from (select 'B01AA01' c from dual union select 'B01AA03' from dual union select 'B01AA04' from dual union select 'B01AA07' from dual union select 'B01AA11' from dual union select 'B01AB01' from dual union select 'B01AB04' from dual union select 'B01AB05' from dual union select 'B01AB06' from dual union select 'B01AB07' from dual union select 'B01AB08' from dual union select 'B01AB10' from dual union select 'B01AB12' from dual union select 'B01AE01' from dual union select 'B01AE02' from dual union select 'B01AE03' from dual union select 'B01AE06' from dual union select 'B01AE07' from dual union select 'B01AF01' from dual union select 'B01AF02' from dual union select 'B01AF03' from dual union select 'B01AF04' from dual union select 'B01AX05' from dual union select 'B01AX07' from dual) t
+--		union select 'COVIDVIRAL', c from (select 'J05AE10' c from dual union select 'J05AP01' from dual union select 'J05AR10' from dual) t
+--		union select 'DIURETIC', c from (select 'C03CA01' c from dual union select 'C03CA02' from dual union select 'C03CA03' from dual union select 'C03CA04' from dual union select 'C03CB01' from dual union select 'C03CB02' from dual union select 'C03CC01' from dual) t
+--		union select 'HCQ', c from (select 'P01BA01' c from dual union select 'P01BA02' from dual) t
+--		union select 'ILI', c from (select 'L04AC03' c from dual union select 'L04AC07' from dual union select 'L04AC11' from dual union select 'L04AC14' from dual) t
+--		union select 'INTERFERON', c from (select 'L03AB08' c from dual union select 'L03AB11' from dual) t
+--		union select 'SIANES', c from (select 'M03AC03' c from dual union select 'M03AC09' from dual union select 'M03AC11' from dual union select 'N01AX03' from dual union select 'N01AX10' from dual union select 'N05CD08' from dual union select 'N05CM18' from dual) t
+--		union select 'SICARDIAC', c from (select 'B01AC09' c from dual union select 'C01CA03' from dual union select 'C01CA04' from dual union select 'C01CA06' from dual union select 'C01CA07' from dual union select 'C01CA24' from dual union select 'C01CE02' from dual union select 'C01CX09' from dual union select 'H01BA01' from dual union select 'R07AX01' from dual) t
+--	) t;
+--commit;    
 
 -- RxNorm codes (optional)
 insert into COVID_MED_MAP
-	select m, 'RxNorm' t, 'RxNorm:'||c  -- Change "RxNorm:" to your local RxNorm code prefix (scheme)
+	select m, 'RXNORM' t, 'RXNORM:'||c  -- Change "RxNorm:" to your local RxNorm code prefix (scheme)
 	from (
 		-- Don't add or remove drugs
 		select 'ACEI' m, c from (select '36908' c from dual union select '39990' from dual union select '104375' from dual union select '104376' from dual union select '104377' from dual union select '104378' from dual union select '104383' from dual union select '104384' from dual union select '104385' from dual union select '1299896' from dual union select '1299897' from dual union select '1299963' from dual union select '1299965' from dual union select '1435623' from dual union select '1435624' from dual union select '1435630' from dual union select '1806883' from dual union select '1806884' from dual union select '1806890' from dual union select '18867' from dual union select '197884' from dual union select '198187' from dual union select '198188' from dual union select '198189' from dual union select '199351' from dual union select '199352' from dual union select '199353' from dual union select '199622' from dual union select '199707' from dual union select '199708' from dual union select '199709' from dual union select '1998' from dual union select '199816' from dual union select '199817' from dual union select '199931' from dual union select '199937' from dual union select '205326' from dual union select '205707' from dual union select '205778' from dual union select '205779' from dual union select '205780' from dual union select '205781' from dual union select '206277' from dual union select '206313' from dual union select '206764' from dual union select '206765' from dual union select '206766' from dual union select '206771' from dual union select '207780' from dual union select '207792' from dual union select '207800' from dual union select '207820' from dual union select '207891' from dual union select '207892' from dual union select '207893' from dual union select '207895' from dual union select '210671' from dual union select '210672' from dual union select '210673' from dual union select '21102' from dual union select '211535' from dual union select '213482' from dual union select '247516' from dual union select '251856' from dual union select '251857' from dual union select '260333' from dual union select '261257' from dual union select '261258' from dual union select '261962' from dual union select '262076' from dual union select '29046' from dual union select '30131' from dual union select '308607' from dual union select '308609' from dual union select '308612' from dual union select '308613' from dual union select '308962' from dual union select '308963' from dual union select '308964' from dual union select '310063' from dual union select '310065' from dual union select '310066' from dual union select '310067' from dual union select '310422' from dual union select '311353' from dual union select '311354' from dual union select '311734' from dual union select '311735' from dual union select '312311' from dual union select '312312' from dual union select '312313' from dual union select '312748' from dual union select '312749' from dual union select '312750' from dual union select '313982' from dual union select '313987' from dual union select '314076' from dual union select '314077' from dual union select '314203' from dual union select '317173' from dual union select '346568' from dual union select '347739' from dual union select '347972' from dual union select '348000' from dual union select '35208' from dual union select '35296' from dual union select '371001' from dual union select '371254' from dual union select '371506' from dual union select '372007' from dual union select '372274' from dual union select '372614' from dual union select '372945' from dual union select '373293' from dual union select '373731' from dual union select '373748' from dual union select '373749' from dual union select '374176' from dual union select '374177' from dual union select '374938' from dual union select '378288' from dual union select '3827' from dual union select '38454' from dual union select '389182' from dual union select '389183' from dual union select '389184' from dual union select '393442' from dual union select '401965' from dual union select '401968' from dual union select '411434' from dual union select '50166' from dual union select '542702' from dual union select '542704' from dual union select '54552' from dual union select '60245' from dual union select '629055' from dual union select '656757' from dual union select '807349' from dual union select '845488' from dual union select '845489' from dual union select '854925' from dual union select '854927' from dual union select '854984' from dual union select '854986' from dual union select '854988' from dual union select '854990' from dual union select '857169' from dual union select '857171' from dual union select '857183' from dual union select '857187' from dual union select '857189' from dual union select '858804' from dual union select '858806' from dual union select '858810' from dual union select '858812' from dual union select '858813' from dual union select '858815' from dual union select '858817' from dual union select '858819' from dual union select '858821' from dual union select '898687' from dual union select '898689' from dual union select '898690' from dual union select '898692' from dual union select '898719' from dual union select '898721' from dual union select '898723' from dual union select '898725' from dual ) t
@@ -299,9 +305,9 @@ insert into COVID_MED_MAP
 commit;
 -- Remdesivir defined separately since many sites will have custom codes (optional)
 insert into COVID_MED_MAP
-	select 'REMDESIVIR', 'RxNorm', 'RxNorm:2284718' from dual 
+	select 'REMDESIVIR', 'RXNORM', 'RXNORM:2284718' from dual 
         union 
-    select 'REMDESIVIR', 'RxNorm', 'RxNorm:2284960' from dual 
+    select 'REMDESIVIR', 'RXNORM', 'RXNORM:2284960' from dual 
         union 
     select 'REMDESIVIR', 'Custom', 'ACT|LOCAL:REMDESIVIR' from dual; 
 commit;
@@ -314,11 +320,12 @@ commit;
 --   and then find all the concepts corresponding to child paths.
 -- WARNING: This query might take several minutes to run. If it is taking more
 --   than an hour, then stop the query and contact us about alternative approaches.
--- drop table COVID_MED_PATHS;
+--drop table COVID_MED_PATHS;
+-- select distinct med_class from COVID_MED_PATHS order by med_class;
 create table COVID_MED_PATHS AS
 select concept_path, concept_cd
 	from nightherondata.concept_dimension
-	where concept_path like '\ACT\Medications\MedicationsByVaClass\V2_09302018\%'
+	where concept_path like '\ACT\Medications\MedicationsByVaClass\V2_09302018\%' -- '\ACT\Medications\MedicationsByAlpha\V2_12112018\RxNormUMLSRxNav\%' --
 		and concept_cd in (select concept_cd from nightherondata.observation_fact); 
 alter table COVID_MED_PATHS add constraint COVID_MEDPATHS_PK primary key (concept_path);
 alter table COVID_MED_PATHS add med_class varchar(50);
