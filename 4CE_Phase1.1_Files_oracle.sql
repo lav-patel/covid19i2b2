@@ -8,6 +8,8 @@ WHENEVER SQLERROR CONTINUE;
   drop table covid_lab_map;
   drop table covid_med_map;
   drop table covid_med_paths;
+  drop table COVID_MED_PATHS_TEMP;
+  drop table COVID_MED_PATHS_TMP2;
   drop table covid_date_list_temp;
   drop table covid_demographics_temp;
   drop table covid_admissions;
@@ -264,7 +266,6 @@ commit;
 -- * The ATC and RxNorm codes represent the same list of medications.
 -- * Use ATC and/or RxNorm, depending on what your institution uses.
 --------------------------------------------------------------------------------
---drop table COVID_MED_MAP;
 create table COVID_MED_MAP (
 	med_class varchar(50) not null,
 	code_type varchar(10) not null,
@@ -328,7 +329,6 @@ commit;
 --   and then find all the concepts corresponding to child paths.
 -- WARNING: This query might take several minutes to run. If it is taking more
 --   than an hour, then stop the query and contact us about alternative approaches.
-drop table COVID_MED_PATHS;
 -- select distinct med_class from COVID_MED_PATHS order by med_class;
 create table COVID_MED_PATHS AS
 select concept_path, concept_cd
@@ -343,7 +343,7 @@ alter table COVID_MED_PATHS add med_class varchar(50);
 -------------------------------------------------------
 -- COVID_MED_PATHS_TEMP
 -------------------------------------------------------
-drop table COVID_MED_PATHS_TEMP;
+
 create table COVID_MED_PATHS_TEMP
 as
 select * from COVID_MED_PATHS where 1=0;
@@ -366,7 +366,7 @@ commit;
 -------------------------------------------------------
 -- COVID_MED_PATHS_TEMP2
 -------------------------------------------------------
-drop table COVID_MED_PATHS_TMP2;
+
 create table COVID_MED_PATHS_TMP2
 as
 select concept_path,concept_cd,med_class
@@ -376,7 +376,7 @@ group by concept_path,concept_cd,med_class;
 
 insert into COVID_MED_PATHS
 select 
-concept_path --|| concept_cd as concept_path,
+concept_path || concept_cd as concept_path,
 concept_cd,
 med_class
 from COVID_MED_PATHS_TMP2;
