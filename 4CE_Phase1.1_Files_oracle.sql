@@ -268,11 +268,12 @@ commit;
 --------------------------------------------------------------------------------
 create table COVID_MED_MAP (
 	med_class varchar(50) not null,
-	code_type varchar(10) not null,
+	code_type varchar(20) not null,
 	local_med_code varchar(50) not null,
     constraint COVID_MEDMAP_PK primary key (med_class, code_type, local_med_code)
 );
 
+-- ALTER TABLE COVID_MED_MAP MODIFY code_type VARCHAR (20  );
 -- ATC codes (optional)
 -- Use Rxnorm
 --insert into COVID_MED_MAP
@@ -381,8 +382,20 @@ concept_cd,
 med_class
 from COVID_MED_PATHS_TMP2;
 where concept_path not in (select concept_path from COVID_MED_PATHS);
-commit;
 
+-- insert mapping into covid_med_map
+insert into COVID_MED_MAP
+select 
+med_class
+,REGEXP_SUBSTR(concept_cd, '[^:]+') as code_type
+,concept_cd as local_med_code
+from COVID_MED_PATHS
+where med_class is not null
+and  med_class || REGEXP_SUBSTR(concept_cd, '[^:]+') || concept_cd
+not in (
+select med_class||code_type||local_med_code from covid_med_map
+);
+commit;
 --##############################################################################
 --### Most sites will not have to modify any SQL beyond this point.
 --### However, review the queries to see if you need to customize them
@@ -410,7 +423,7 @@ create table covid_pos_patients (
 
 insert into covid_pos_patients
 	select patient_num, cast(min(start_date) as date) covid_pos_date
-	from observation_fact f
+	from nightherondata.observation_fact f
 		inner join covid_code_map m
 			on f.concept_cd = m.local_code and m.code = 'covidpos'
 	group by patient_num;
@@ -428,13 +441,13 @@ create table covid_admissions (
 );
 
 insert into covid_admissions
-	select distinct v.patient_num, cast(start_date as date), cast(coalesce(end_date,current_date) as date)
-	from visit_dimension v
-		inner join covid_pos_patients p
-			on v.patient_num=p.patient_num 
-				and v.start_date >= (trunc(p.covid_pos_date)-7)
-		inner join covid_code_map m
-			on v.inout_cd = m.local_code and m.code = 'inpatient';
+    select distinct v.patient_num, cast(start_date as date), cast(coalesce(end_date,current_date) as date)
+    from (select patient_num, start_date, end_date from nightherondata.observation_fact where concept_cd = 'KUH|HOSP_ADT_CLASS:101') v
+        inner join covid_pos_patients p
+            on v.patient_num=p.patient_num
+            and v.start_date >= (trunc(p.covid_pos_date)-7)
+;            
+ 
 commit;
 
 --------------------------------------------------------------------------------
@@ -477,7 +490,7 @@ create table covid_severe_patients (
 -- WARNING: This query might take a few minutes to run.
 insert into covid_severe_patients
 	select f.patient_num, min(start_date) start_date
-	from observation_fact f
+	from nightherondata.observation_fact f
 		inner join covid_cohort c
 			on f.patient_num = c.patient_num and f.start_date >= c.admission_date
 		cross apply covid_config x
@@ -496,6 +509,7 @@ insert into covid_severe_patients
 		or regexp_like(f.concept_cd , code_prefix_icd10pcs||'5A09[345]{1}[A-Z0-9]?') --Converted to ORACLE Regex
 		or regexp_like(f.concept_cd , code_prefix_icd9proc||'96.7[012]{1}') --Converted to ORACLE Regex
 	group by f.patient_num;
+--only 0 rows inserted.
 commit;    
 
 -- Update the covid_cohort table to flag severe patients 
