@@ -7,6 +7,7 @@ WHENEVER SQLERROR CONTINUE;
   drop table covid_code_map;
   drop table covid_lab_map;
   drop table covid_med_map;
+  drop table covid_med_paths;
   drop table covid_date_list_temp;
   drop table covid_demographics_temp;
   drop table covid_admissions;
@@ -123,9 +124,9 @@ commit;
 
 -- Codes that indicate a positive COVID-19 test result (use either option #1 and/or option #2)
 -- COVID-19 Positive Option #1: individual concept_cd values
-insert into  COVID_CODE_MAP
-	select 'covidpos', 'COVID-xyz-test:POSITIVE' from dual;
-commit;
+--insert into  COVID_CODE_MAP
+--	select 'covidpos', 'COVID-xyz-test:POSITIVE' from dual;
+--commit;
 
 -- COVID-19 Positive Option #2: an ontology path (the example here is the COVID ACT "Any Positive Test" path)
 insert into  COVID_CODE_MAP
