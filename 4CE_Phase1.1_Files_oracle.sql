@@ -47,7 +47,7 @@ insert into COVID_CONFIG
 		1, -- race_in_fact_table
 		1, -- hispanic_in_fact_table
 		1, -- death_data_accurate
-		'ICD9:', -- code_prefix_icd9cm
+		'ICD9:', -- code_prefix_icd9cm   -- TOOD: Ask them what if we are using local code example dx_id
 		'ICD10:', -- code_prefix_icd10cm --select concept_cd from  Nightherondata.concept_dimension   where concept_path like '\i2b2\Diagnoses\ICD10\A20098492\A20160670\A18924177\%'
 		'ICD9:', -- code_prefix_icd9proc -- select concept_cd from  Nightherondata.CONCEPT_DIMENSION   where concept_path LIKE '\PCORI\PROCEDURE\09\(08-16.99) Ope~jf1y\(15) Operation~pru9\%';
 		'ICD10:', -- code_prefix_icd10pcs --select concept_cd from  Nightherondata.CONCEPT_DIMENSION   where concept_path LIKE '\PCORI\PROCEDURE\10\(4) Measuremen~ge9w\(4A) Measureme~dxgz\(4A1) Measurem~49bf\(4A13) Measure~djxw\%';
@@ -59,6 +59,7 @@ insert into COVID_CONFIG
 		1 -- output_as_csv
     from dual;    
 commit;
+-- TODO:??
 -- ! If your ICD codes do not start with a prefix (e.g., "ICD:"), then you will
 -- ! need to customize the query that populates the covid_diagnoses table so that
 -- ! only diagnosis codes are selected from the observation_fact table.
@@ -75,23 +76,29 @@ create table COVID_CODE_MAP (
     constraint COVID_CODEMAP_PK PRIMARY KEY (code, local_code)
 );
 
+--TODO: what about ED
+/*
+	212706
+UN	11948
+AV	991376
+ED	43266
+OT	99673
+IP	17761
+EI	20018
+OS	779
+OA	3021348
+*/
 -- Inpatient visits (visit_dimension.inout_cd)
 insert into  COVID_CODE_MAP
-	select 'inpatient', 'I' from dual -- select distinct inout_cd from nightherondata.visit_dimension;
---        union all 
---    select 'inpatient', 'IN' from dual
+	select 'inpatient', 'IP' from dual -- select inout_cd, count (*) from nightherondata.visit_dimension group by inout_cd; --IP	17761
 ;
-    --UNC: 'INPATIENT'
+
 commit;    
--- Sex (patient_dimension.sex_cd)
+-- Sex (patient_dimension.sex_cd) -- select sex_cd, count(*) from nightherondata.patient_dimension group by sex_cd;
 insert into  COVID_CODE_MAP
 	select 'male', 'm' from dual
         union all 
---    select 'male', 'Male' from dual
---        union all 
     select 'female', 'f' from dual
---        union all 
---    select 'female', 'Female' from dual
     ;
 commit;    
 -- Race (field based on covid_config.race_in_fact_table; ignore if you don't collect race/ethnicity)
@@ -106,7 +113,6 @@ insert into  COVID_CODE_MAP
         union all 
     select 'white', 'DEM|RACE:white' from dual;
 commit; 
---UNC: white:'1', islander:'5', black:'2',asian:'4',native:'3'
 
 -- Hispanic/Latino (field based on covid_config.hispanic_in_fact_table; ignore if you don't collect race/ethnicity)
 insert into  COVID_CODE_MAP
@@ -114,7 +120,6 @@ insert into  COVID_CODE_MAP
         union all 
     select 'hispanic_latino', 'DEM|ETHNICITY:his' from dual;
 commit; 
---UNC: HISP:'2',No:'1'
 
 -- Codes that indicate a positive COVID-19 test result (use either option #1 and/or option #2)
 -- COVID-19 Positive Option #1: individual concept_cd values
@@ -327,7 +332,8 @@ select concept_path, concept_cd
 	from nightherondata.concept_dimension
 	where concept_path like '\ACT\Medications\MedicationsByVaClass\V2_09302018\%' -- '\ACT\Medications\MedicationsByAlpha\V2_12112018\RxNormUMLSRxNav\%' --
 		and concept_cd in (select concept_cd from nightherondata.observation_fact); 
-alter table COVID_MED_PATHS add constraint COVID_MEDPATHS_PK primary key (concept_path);
+-- TODO: enable concept_path primary key
+--alter table COVID_MED_PATHS add constraint COVID_MEDPATHS_PK primary key (concept_path);
 alter table COVID_MED_PATHS add med_class varchar(50);
 insert into COVID_MED_PATHS
 	select distinct 'Expand', d.concept_cd, m.med_class
