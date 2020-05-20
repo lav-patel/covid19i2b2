@@ -136,7 +136,6 @@ insert into  COVID_CODE_MAP
 		and concept_cd is not null
 		and not exists (select * from COVID_CODE_MAP m where m.code='covidpos' and m.local_code=c.concept_cd);
 commit;        
-
 --------------------------------------------------------------------------------
 -- Lab mappings
 -- * Do not change the loinc column or the lab_units column.
@@ -150,6 +149,8 @@ commit;
 --select * from COVID_LAB_MAP lm
 --left join dconnolly.counts_by_concept cbc on cbc.concept_cd = lm.local_lab_code
 --order by lm.lab_name, patients desc;
+-- TOD0: Apply scale_factor
+-- TOD0: find remaing labs
 --------------------------------------------------------------------------------
 create table COVID_LAB_MAP (
 	loinc varchar(20) not null, 
@@ -310,6 +311,7 @@ insert into COVID_MED_MAP
 	) t;
 commit;
 -- Remdesivir defined separately since many sites will have custom codes (optional)
+-- TODO: find REMDESIVIR exisit or not
 insert into COVID_MED_MAP
 	select 'REMDESIVIR', 'RXNORM', 'RXNORM:2284718' from dual 
         union 
@@ -326,18 +328,30 @@ commit;
 --   and then find all the concepts corresponding to child paths.
 -- WARNING: This query might take several minutes to run. If it is taking more
 --   than an hour, then stop the query and contact us about alternative approaches.
---drop table COVID_MED_PATHS;
+drop table COVID_MED_PATHS;
 -- select distinct med_class from COVID_MED_PATHS order by med_class;
 create table COVID_MED_PATHS AS
 select concept_path, concept_cd
 	from nightherondata.concept_dimension
 	where concept_path like '\ACT\Medications\MedicationsByVaClass\V2_09302018\%' -- '\ACT\Medications\MedicationsByAlpha\V2_12112018\RxNormUMLSRxNav\%' --
-		and concept_cd in (select concept_cd from nightherondata.observation_fact); 
+		and concept_cd in (select concept_cd from nightherondata.observation_fact)
+        ; 
 -- TODO: enable concept_path primary key
---alter table COVID_MED_PATHS add constraint COVID_MEDPATHS_PK primary key (concept_path);
+alter table COVID_MED_PATHS add constraint COVID_MEDPATHS_PK primary key (concept_path);
+--alter table COVID_MED_PATHS drop constraint COVID_MEDPATHS_PK;
 alter table COVID_MED_PATHS add med_class varchar(50);
-insert into COVID_MED_PATHS
-	select distinct 'Expand', d.concept_cd, m.med_class
+-------------------------------------------------------
+-- COVID_MED_PATHS_TEMP
+-------------------------------------------------------
+drop table COVID_MED_PATHS_TEMP;
+create table COVID_MED_PATHS_TEMP
+as
+select * from COVID_MED_PATHS where 1=0;
+insert into COVID_MED_PATHS_TEMP
+	select distinct 
+--    'Expand',
+    c.concept_path ||m.local_med_code ,
+    d.concept_cd, m.med_class
 	from COVID_MED_MAP m
 		inner join nightherondata.concept_dimension c
 			on m.local_med_code = c.concept_cd
@@ -348,8 +362,26 @@ insert into COVID_MED_PATHS
 		from COVID_MED_MAP t
 		where t.med_class = m.med_class and t.local_med_code = d.concept_cd
 	);
-commit;    
+commit;  
+-------------------------------------------------------
+-- COVID_MED_PATHS_TEMP2
+-------------------------------------------------------
+drop table COVID_MED_PATHS_TMP2;
+create table COVID_MED_PATHS_TMP2
+as
+select concept_path,concept_cd,med_class
+from COVID_MED_PATHS_TEMP
+group by concept_path,concept_cd,med_class;
+--alter table COVID_MED_PATHS_TEMP2 add constraint COVID_MEDPATHS2_PK primary key (concept_path);
 
+insert into COVID_MED_PATHS
+select 
+concept_path --|| concept_cd as concept_path,
+concept_cd,
+med_class
+from COVID_MED_PATHS_TMP2;
+where concept_path not in (select concept_path from COVID_MED_PATHS);
+commit;
 
 --##############################################################################
 --### Most sites will not have to modify any SQL beyond this point.
