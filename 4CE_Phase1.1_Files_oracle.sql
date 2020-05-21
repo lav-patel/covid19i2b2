@@ -79,7 +79,7 @@ create table COVID_CODE_MAP (
     constraint COVID_CODEMAP_PK PRIMARY KEY (code, local_code)
 );
 
---TODO: what about ED
+--MW: If patients was in ED than become IP, it should be flagged as IP
 /*
 	212706
 UN	11948
@@ -153,6 +153,26 @@ commit;
 --order by lm.lab_name, patients desc;
 -- TOD0: Apply scale_factor
 -- TOD0: find remaing labs
+/*
+with cp as 
+(
+select concept_path
+from  NightHeronData.concept_dimension
+where concept_cd in (
+'LOINC:48066-5',
+'LOINC:3255-7'
+,'LOINC:2276-4'
+,'LOINC:2019-8'
+,'LOINC:2703-7'
+)
+)
+select *
+from NightHeronData.concept_dimension cd
+join cp
+    on cd.concept_path like  cp.concept_path|| '%'
+order by cd.concept_path
+;
+*/
 --------------------------------------------------------------------------------
 create table COVID_LAB_MAP (
 	loinc varchar(20) not null, 
@@ -201,38 +221,36 @@ insert into COVID_LAB_MAP
             union 
         select '49563-0','2327',1,'ng/mL','cardiac troponin (High Sensitivity)' from dual
             union 
---        select '6598-7','6598-7',1,'ug/L','cardiac troponin (Normal Sensitivity)' from dual
---            union 
---        select '6598-7','10839-9',1,'ug/L','cardiac troponin (Normal Sensitivity)' from dual
---            union    
+        select '6598-7','2328',1,'ug/L','cardiac troponin (Normal Sensitivity)' from dual
+            union 
 --        select '48065-7','48065-7',1,'ng/mL{FEU}','D-dimer (FEU)' from dual
---            union 
---        select '48066-5','48066-5',1,'ng/mL{DDU}','D-dimer (DDU)' from dual
---            union 
+--            union  -- dont have child of loinc ( 0 records) in HEORN
+        select '48066-5','3094',1,'ng/mL{DDU}','D-dimer (DDU)' from dual
+            union 
         select '5902-2','52032',1,'s','prothrombin time (PT)' from dual
             union 
         select '33959-8','664',1,'ng/mL','procalcitonin' from dual
             union 
         select '1988-5','3186',1,'mg/L','C-reactive protein (CRP) (Normal Sensitivity)' from dual
---            union 
---        select '3255-7','3255-7',1,'mg/dL','Fibrinogen' from dual
---            union 
---        select '2276-4','2276-4',1,'ng/mL','Ferritin' from dual
---            union 
---        select '2019-8','2019-8',1,'mmHg','PaCO2' from dual
---            union 
---        select '2019-8','2021-4',1,'mmHg','PaCO2' from dual
---            union    
---        select '2019-8','2020-6',1,'mmHg','PaCO2' from dual
---            union
---        select '2703-7','2703-7',1,'mmHg','PaO2' from dual
---            union
---        select '2703-7','2705-2',1,'mmHg','PaO2' from dual
---            union
---        select '2703-7','2704-5',1,'mmHg','PaO2' from dual
-		--union select '2703-7','second-code',1,'mmHg','PaO2'
-		--union select '2703-7','third-code',1,'mmHg','PaO2'
--- TODO: Commented out
+            union 
+        select '3255-7','3093',1,'mg/dL','Fibrinogen' from dual
+            union 
+        select '2276-4','3176',1,'ng/mL','Ferritin' from dual
+            union 
+        select '2019-8','3761',1,'mmHg','PaCO2' from dual
+            union 
+        select '2019-8','4003',1,'mmHg','PaCO2' from dual
+            union    
+        select '2019-8','4004',1,'mmHg','PaCO2' from dual
+            union
+        select '2019-8','51936',1,'mmHg','PaCO2' from dual
+            union
+        select '2703-7','4005',1,'mmHg','PaO2' from dual
+            union
+        select '2703-7','4006',1,'mmHg','PaO2' from dual
+            union
+        select '2703-7','51988',1,'mmHg','PaO2' from dual
+-- TODO: all labs are mapped but unit conversion is remaning.
 	) t;
 commit;
 
