@@ -263,16 +263,17 @@ commit;
 --   lab codes use different units than their parent code.
 -- WARNING: This query might take several minutes to run.
 /*
-insert into COVID_LAB_MAP
+create table COVID_LAB_MAP2 as select * from COVID_LAB_MAP where 1=0;
+insert into COVID_LAB_MAP2
 	select distinct l.loinc, d.concept_cd, l.scale_factor, l.lab_units, l.lab_name
 	from COVID_LAB_MAP l
-		inner join concept_dimension c
+		inner join nightherondata.concept_dimension c
 			on l.local_lab_code = c.concept_cd
-		inner join concept_dimension d
-			on d.concept_path like c.concept_path+'%'
+		inner join nightherondata.concept_dimension d
+			on d.concept_path like c.concept_path ||'%'
 	where not exists (
 		select *
-		from COVID_LAB_MAP t
+		from COVID_LAB_MAP2 t
 		where t.loinc = l.loinc and t.local_lab_code = d.concept_cd
 	);
 commit;    
