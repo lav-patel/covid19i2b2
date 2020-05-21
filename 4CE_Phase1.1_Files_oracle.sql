@@ -333,9 +333,12 @@ insert into COVID_MED_MAP
 commit;
 -- Remdesivir defined separately since many sites will have custom codes (optional)
 /*
-select count(*) from CLARITY.med_dispense
-where ext_drug_desp like '%REMDESIVIR%'; 
--- 0
+ select * from clarity.clarity_medication where upper(name) like '%REMDESIVIR%';
+ /*
+ 213022	(INV) REMDESIVIR (HSC ######) 100 MG/20 ML (5 MG/ML) IJ SOLR
+213023	(INV) REMDESIVIR (HSC ######) 100 MG/20 ML (5 MG/ML) IV SOLUTION
+252863	(INV) REMDESIVIR (HSC ######) IVPB
+-- But they are not brought to heron.
 */
 --insert into COVID_MED_MAP
 --	select 'REMDESIVIR', 'RXNORM', 'RXNORM:2284718' from dual 
