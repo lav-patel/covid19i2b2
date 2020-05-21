@@ -526,33 +526,50 @@ commit;
 --------------------------------------------------------------------------------
 -- Add death dates to patients who have died.
 --------------------------------------------------------------------------------
-begin
-    if exists (select * from covid_config where death_data_accurate = 1) then 
-        -- Get the death date from the patient_dimension table.
-        update covid_cohort c
-            set c.death_date = (
-                select 
-                    case when p.death_date > coalesce(severe_date,admission_date) 
-                    then p.death_date 
-                    else coalesce(severe_date,admission_date) end
-                from covid_cohort c
-                   inner join patient_dimension p on p.patient_num = c.patient_num
-            )
-            where exists (select c.patient_num from patient_dimension p where p.patient_num = c.patient_num and (p.death_date is not null or p.vital_status_cd in ('Y'))); 
-        commit;
-        -- Check that there aren't more recent facts for the deceased patients.
-        update covid_cohort c
-            set c.death_date = (
-                select max(f.start_date) death_date
-                from covid_cohort p
-                   inner join observation_fact f
-                      on f.patient_num = p.patient_num
-                where p.death_date is not null and f.start_date > p.death_date
-            )
-            where c.death_date is not null; 
-        commit;
-    end if;            
-end;
+update
+(
+with death_data as
+(
+select patient_num, death_date from nightherondata.patient_dimension
+where patient_num in (select patient_num from covid_cohort)
+    and death_date is not null
+)
+select c.death_date as OLD ,d.death_date as NEW
+from covid_cohort c
+join death_data d
+    on c.patient_num = d.patient_num
+)t
+set t.OLD=t.NEW
+;
+commit;
+
+--begin
+--    if exists (select * from covid_config where death_data_accurate = 1) then 
+--        -- Get the death date from the patient_dimension table.
+--        update covid_cohort c
+--            set c.death_date = (
+--                select 
+--                    case when p.death_date > coalesce(severe_date,admission_date) 
+--                    then p.death_date 
+--                    else coalesce(severe_date,admission_date) end
+--                from covid_cohort c
+--                   inner join patient_dimension p on p.patient_num = c.patient_num
+--            )
+--            where exists (select c.patient_num from patient_dimension p where p.patient_num = c.patient_num and (p.death_date is not null or p.vital_status_cd in ('Y'))); 
+--        commit;
+--        -- Check that there aren't more recent facts for the deceased patients.
+--        update covid_cohort c
+--            set c.death_date = (
+--                select max(f.start_date) death_date
+--                from covid_cohort p
+--                   inner join observation_fact f
+--                      on f.patient_num = p.patient_num
+--                where p.death_date is not null and f.start_date > p.death_date
+--            )
+--            where c.death_date is not null; 
+--        commit;
+--    end if;            
+--end;
 
 
 --******************************************************************************
