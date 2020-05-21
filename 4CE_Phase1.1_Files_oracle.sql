@@ -338,7 +338,7 @@ commit;
  213022	(INV) REMDESIVIR (HSC ######) 100 MG/20 ML (5 MG/ML) IJ SOLR
 213023	(INV) REMDESIVIR (HSC ######) 100 MG/20 ML (5 MG/ML) IV SOLUTION
 252863	(INV) REMDESIVIR (HSC ######) IVPB
--- But they are not brought to heron.
+-- TODO: Bring Remdesivir to HERON as they are not brought to heron from clairty.
 */
 --insert into COVID_MED_MAP
 --	select 'REMDESIVIR', 'RXNORM', 'RXNORM:2284718' from dual 
@@ -499,7 +499,31 @@ insert into covid_cohort
 	group by p.patient_num;
 --138
 commit;
+--------------------------------------------------------------------------------
+-- ICD mapping
+--------------------------------------------------------------------------------
+drop table cd1;
+create table cd1
+as
+ select * 
+from nightherondata.concept_dimension cd1
+where cd1.concept_cd like'ICD10%'
+or cd1.concept_cd like'ICD9%';
 
+
+drop table ICD_map;
+create table ICD_map
+as
+select cd1.concept_cd ICD10,cd2.concept_cd dx_id
+from cd1
+join nightherondata.concept_dimension cd2 
+    on cd2.concept_path like cd1.concept_path || '%'
+    and cd1.concept_cd <> cd2.concept_cd
+    and cd2.concept_cd not like 'ICD10%'
+    and cd2.concept_cd not like 'ICD9%'
+;    
+select count(*) from ICD_MAP;
+--4457405
 --******************************************************************************
 --******************************************************************************
 --*** Determine which patients had severe disease or died
@@ -527,6 +551,13 @@ insert into covid_severe_patients
 		-- Any severe medication
 		or f.concept_cd in (select local_med_code from covid_med_map where med_class in ('SIANES','SICARDIAC'))
 		-- Acute respiratory distress syndrome (diagnosis)
+        ---530
+        ;
+        select * 
+        from nightherondata.concept_dimension cd1
+        join nightherondata.concept_dimension cd2 
+            on cd1.concept_path like cd2.concept_path || '%'
+        where cd1.concept_cd='ICD10:J80';
 		or f.concept_cd in (code_prefix_icd10cm||'J80', code_prefix_icd9cm||'518.82')
 		-- Ventilator associated pneumonia (diagnosis)
 		or f.concept_cd in (code_prefix_icd10cm||'J95.851', code_prefix_icd9cm||'997.31')
