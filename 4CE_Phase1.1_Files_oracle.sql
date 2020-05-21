@@ -332,14 +332,18 @@ insert into COVID_MED_MAP
 	) t;
 commit;
 -- Remdesivir defined separately since many sites will have custom codes (optional)
--- TODO: find REMDESIVIR exisit or not
-insert into COVID_MED_MAP
-	select 'REMDESIVIR', 'RXNORM', 'RXNORM:2284718' from dual 
-        union 
-    select 'REMDESIVIR', 'RXNORM', 'RXNORM:2284960' from dual 
-        union 
-    select 'REMDESIVIR', 'Custom', 'ACT|LOCAL:REMDESIVIR' from dual; 
-commit;
+/*
+select count(*) from CLARITY.med_dispense
+where ext_drug_desp like '%REMDESIVIR%'; 
+-- 0
+*/
+--insert into COVID_MED_MAP
+--	select 'REMDESIVIR', 'RXNORM', 'RXNORM:2284718' from dual 
+--        union 
+--    select 'REMDESIVIR', 'RXNORM', 'RXNORM:2284960' from dual 
+--        union 
+--    select 'REMDESIVIR', 'Custom', 'ACT|LOCAL:REMDESIVIR' from dual; 
+--commit;
 
 -- Use the concept_dimension to get an expanded list of medication codes (optional)
 -- Uncomment the query below to run this as part of the script.
@@ -356,7 +360,6 @@ select concept_path, concept_cd
 	where concept_path like '\ACT\Medications\MedicationsByVaClass\V2_09302018\%' -- '\ACT\Medications\MedicationsByAlpha\V2_12112018\RxNormUMLSRxNav\%' --
 		and concept_cd in (select concept_cd from nightherondata.observation_fact)
         ; 
--- TODO: enable concept_path primary key
 alter table COVID_MED_PATHS add constraint COVID_MEDPATHS_PK primary key (concept_path);
 --alter table COVID_MED_PATHS drop constraint COVID_MEDPATHS_PK;
 alter table COVID_MED_PATHS add med_class varchar(50);
