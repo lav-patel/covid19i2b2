@@ -623,7 +623,7 @@ create table covid_demographics_temp (
 -- Get patients' sex
 insert into covid_demographics_temp (patient_num, sex)
 	select patient_num, m.code
-	from patient_dimension p
+	from nightherondata.patient_dimension p
 		inner join covid_code_map m
 			on p.sex_cd = m.local_code
 				and m.code in ('male','female')
@@ -655,7 +655,7 @@ insert into covid_demographics_temp (patient_num, age_group)
 			when floor(months_between(sysdate, birth_date)/12) between 70 and 79 then '70to79'
 			when floor(months_between(sysdate, birth_date)/12) >= 80 then '80plus'
 			else 'other' end) age
-	from patient_dimension
+	from nightherondata.patient_dimension
 	where patient_num in (select patient_num from covid_cohort);
 commit;    
 -- Get patients' race(s)
@@ -663,7 +663,7 @@ commit;
 insert into covid_demographics_temp (patient_num, race)
 	select p.patient_num, m.code
 	from covid_config x
-		cross join patient_dimension p
+		cross join nightherondata.patient_dimension p
 		inner join covid_code_map m
 			on p.race_cd = m.local_code
 	where p.patient_num in (select patient_num from covid_cohort)
@@ -673,13 +673,14 @@ insert into covid_demographics_temp (patient_num, race)
 			or
 			(x.hispanic_in_fact_table = 0 and m.code in ('hispanic_latino'))
 		)
+-- no rows
 ;commit;
 
 -- (race from observation_fact)
 insert into covid_demographics_temp (patient_num, race)
 	select f.patient_num, m.code
 	from covid_config x
-		cross join observation_fact f
+		cross join nightherondata.observation_fact f
 		inner join covid_code_map m
 			on f.concept_cd = m.local_code
 	where f.patient_num in (select patient_num from covid_cohort)
@@ -689,7 +690,8 @@ insert into covid_demographics_temp (patient_num, race)
 			or
 			(x.hispanic_in_fact_table = 1 and m.code in ('hispanic_latino'))
 		)
-;commit;        
+;
+commit;        
 -- Make sure every patient has a sex, age_group, and race
 insert into covid_demographics_temp (patient_num, sex, age_group, race)
 	select patient_num, 'other', null, null
@@ -703,7 +705,8 @@ insert into covid_demographics_temp (patient_num, sex, age_group, race)
 	select patient_num, null, null, 'other'
 		from covid_cohort
 		where patient_num not in (select patient_num from covid_demographics_temp where race is not null)
-;commit;
+;
+commit;
 
 --******************************************************************************
 --******************************************************************************
@@ -726,7 +729,7 @@ create table covid_daily_counts (
 );
 
 insert into covid_daily_counts
-	select '' siteid, d.*,
+	select 'KUMC' siteid, d.*,
 		(select count(distinct c.patient_num)
 			from covid_admissions p
 				inner join covid_cohort c
@@ -751,12 +754,14 @@ insert into covid_daily_counts
 			cross join covid_cohort c
 		group by d.d
 	) d
-;commit;    
+;
+commit;    
 -- Set cumulative_patients_dead = -999 if you do not have accurate death data. 
 update covid_daily_counts
 	set cumulative_patients_dead = -999
 	where exists (select * from covid_config where death_data_accurate = 0)
-;commit;    
+;
+commit;    
 
 --------------------------------------------------------------------------------
 -- Create ClinicalCourse table.
@@ -769,7 +774,7 @@ create table covid_clinical_course (
     constraint covid_clinicalcourse_pk primary key (days_since_admission)
 );
 insert into covid_clinical_course
-	select '' siteid, days_since_admission, 
+	select 'KUMC' siteid, days_since_admission, 
 		count(*),
 		sum(severe)
 	from (
@@ -782,7 +787,8 @@ insert into covid_clinical_course
 				on p.patient_num=c.patient_num and p.admission_date>=c.admission_date
 	) t
 	group by days_since_admission
-;commit;    
+;
+commit;    
 
 --------------------------------------------------------------------------------
 -- Create Demographics table.
@@ -797,7 +803,7 @@ create table covid_demographics (
     constraint covid_demographics_pk primary key (sex, age_group, race)
 );
 insert into covid_demographics
-	select '' siteid, sex, age_group, race, count(*), sum(severe)
+	select 'KUMC' siteid, sex, age_group, race, count(*), sum(severe)
 	from covid_cohort c
 		inner join (
 			select patient_num, sex from covid_demographics_temp where sex is not null
@@ -815,12 +821,14 @@ insert into covid_demographics
 			select patient_num, 'all' from covid_cohort
 		) r on c.patient_num=r.patient_num
 	group by sex, age_group, race
-;commit;    
+;
+commit;    
 -- Set counts = -999 if not including race.
 update covid_demographics
 	set num_patients_all = -999, num_patients_ever_severe = -999
 	where exists (select * from covid_config where include_race = 0)
-;commit;
+;
+commit;
 --------------------------------------------------------------------------------
 -- Create Labs table.
 --------------------------------------------------------------------------------
@@ -842,7 +850,7 @@ create table covid_labs (
     constraint covid_labs_pk primary key (loinc, days_since_admission)
 );
 insert into covid_labs
-	select '' siteid, loinc, days_since_admission, lab_units,
+	select 'KUMC' siteid, loinc, days_since_admission, lab_units,
 		count(*), 
 		avg(val), 
 		coalesce(stddev(val),0),
@@ -861,7 +869,7 @@ insert into covid_labs
 			select l.loinc, l.lab_units, f.patient_num, p.severe,
 				trunc(p.admission_date) - trunc(f.start_date) days_since_admission,
 				f.nval_num*l.scale_factor val
-			from observation_fact f
+			from nightherondata.observation_fact f
 				inner join covid_cohort p 
 					on f.patient_num=p.patient_num
 				inner join covid_lab_map l
@@ -875,7 +883,8 @@ insert into covid_labs
 		group by loinc, lab_units, patient_num, severe, days_since_admission
 	) t
 	group by loinc, days_since_admission, lab_units
-;commit;    
+;
+commit;    
 
 --------------------------------------------------------------------------------
 -- Create Diagnosis table.
@@ -906,7 +915,7 @@ insert into covid_diagnoses
 			(case when f.start_date <= (trunc(p.admission_date)-15) then 1 else 0 end) before_admission,
 			(case when f.start_date >= p.admission_date then 1 else 0 end) since_admission
 		from covid_config x
-			cross join observation_fact f
+			cross join nightherondata.observation_fact f
 			inner join covid_cohort p 
 				on f.patient_num=p.patient_num 
 					and f.start_date >= (trunc(p.admission_date)-365)
@@ -918,7 +927,7 @@ insert into covid_diagnoses
 			(case when f.start_date <= (trunc(p.admission_date)-15) then 1 else 0 end) before_admission,
 			(case when f.start_date >= p.admission_date then 1 else 0 end) since_admission
 		from covid_config x
-			cross join observation_fact f
+			cross join nightherondata.observation_fact f
 			inner join covid_cohort p 
 				on f.patient_num=p.patient_num 
 					and f.start_date >= (trunc(p.admission_date)-365)
@@ -926,7 +935,7 @@ insert into covid_diagnoses
 	) t
 	group by icd_code_3chars, icd_version;
 commit;    
-
+-- TODO: 0 rows inserted
 --------------------------------------------------------------------------------
 -- Create Medications table.
 --------------------------------------------------------------------------------
@@ -940,7 +949,7 @@ create table covid_medications (
     constraint covid_medications primary key (med_class)
 );
 insert into covid_medications
-	select '' siteid, med_class,
+	select 'KUMC' siteid, med_class,
 		sum(before_admission), 
 		sum(since_admission), 
 		sum(severe*before_admission), 
@@ -949,7 +958,7 @@ insert into covid_medications
 		select distinct p.patient_num, p.severe, m.med_class,	
 			(case when f.start_date <= (trunc(p.admission_date)-15) then 1 else 0 end) before_admission,
 			(case when f.start_date >= p.admission_date then 1 else 0 end) since_admission
-		from observation_fact f
+		from nightherondata.observation_fact f
 			inner join covid_cohort p 
 				on f.patient_num=p.patient_num 
 					and f.start_date >= (trunc(p.admission_date)-365)
