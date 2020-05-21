@@ -385,7 +385,7 @@ where concept_path not in (select concept_path from COVID_MED_PATHS);
 
 -- insert mapping into covid_med_map
 insert into COVID_MED_MAP
-select 
+select distinct
 med_class
 ,REGEXP_SUBSTR(concept_cd, '[^:]+') as code_type
 ,concept_cd as local_med_code
@@ -427,6 +427,7 @@ insert into covid_pos_patients
 		inner join covid_code_map m
 			on f.concept_cd = m.local_code and m.code = 'covidpos'
 	group by patient_num;
+--451
 commit;    
 
 --------------------------------------------------------------------------------
@@ -447,7 +448,7 @@ insert into covid_admissions
             on v.patient_num=p.patient_num
             and v.start_date >= (trunc(p.covid_pos_date)-7)
 ;            
- 
+--159 
 commit;
 
 --------------------------------------------------------------------------------
@@ -471,6 +472,7 @@ insert into covid_cohort
 			on p.patient_num = a.patient_num	
 				and a.admission_date <= (trunc(covid_pos_date)+14)
 	group by p.patient_num;
+--138
 commit;
 
 --******************************************************************************
@@ -509,7 +511,7 @@ insert into covid_severe_patients
 		or regexp_like(f.concept_cd , code_prefix_icd10pcs||'5A09[345]{1}[A-Z0-9]?') --Converted to ORACLE Regex
 		or regexp_like(f.concept_cd , code_prefix_icd9proc||'96.7[012]{1}') --Converted to ORACLE Regex
 	group by f.patient_num;
---only 0 rows inserted.
+-- 49
 commit;    
 
 -- Update the covid_cohort table to flag severe patients 
