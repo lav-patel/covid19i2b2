@@ -55,7 +55,7 @@ insert into COVID_CONFIG
 		'ICD9:', -- code_prefix_icd9proc -- select concept_cd from  Nightherondata.CONCEPT_DIMENSION   where concept_path LIKE '\PCORI\PROCEDURE\09\(08-16.99) Ope~jf1y\(15) Operation~pru9\%';
 		'ICD10:', -- code_prefix_icd10pcs --select concept_cd from  Nightherondata.CONCEPT_DIMENSION   where concept_path LIKE '\PCORI\PROCEDURE\10\(4) Measuremen~ge9w\(4A) Measureme~dxgz\(4A1) Measurem~49bf\(4A13) Measure~djxw\%';
 		0, -- obfuscation_blur
-		10, -- obfuscation_small_count_mask
+		11, -- obfuscation_small_count_mask
 		0, -- obfuscation_small_count_delete
 		0, -- obfuscation_demographics
 		0, -- output_as_columns
@@ -176,24 +176,25 @@ order by cd.concept_path
 /*
 with f_unit as
 (
-select  f.concept_cd , f.units_cd
+select  f.concept_cd , f.units_cd, f.nval_num
 from nightherondata.observation_fact f
 where
 f.concept_cd in (
-'KUH|COMPONENT_ID:3761',
-'KUH|COMPONENT_ID:4003',
-'KUH|COMPONENT_ID:4004',
-'KUH|COMPONENT_ID:51936',
-'KUH|COMPONENT_ID:3176',
-'KUH|COMPONENT_ID:4005',
-'KUH|COMPONENT_ID:3093',
-'KUH|COMPONENT_ID:3094',
-'KUH|COMPONENT_ID:52032',
-'KUH|COMPONENT_ID:2328',
-'KUH|COMPONENT_ID:3016'
+'KUH|COMPONENT_ID:3094'
+--'KUH|COMPONENT_ID:3761',
+--'KUH|COMPONENT_ID:4003',
+--'KUH|COMPONENT_ID:4004',
+--'KUH|COMPONENT_ID:51936',
+--'KUH|COMPONENT_ID:3176',
+--'KUH|COMPONENT_ID:4005',
+--'KUH|COMPONENT_ID:3093',
+--'KUH|COMPONENT_ID:3094',
+--'KUH|COMPONENT_ID:52032',
+--'KUH|COMPONENT_ID:2328',
+--'KUH|COMPONENT_ID:3016'
 )
 )
-select concept_cd , units_cd, count(*)
+select concept_cd , units_cd, count(*), avg(nval_num),MEDIAN(nval_num), stddev(nval_num)
 from f_unit
 group by concept_cd , units_cd
 order by concept_cd , count(*) DESC;
@@ -382,6 +383,9 @@ commit;
 -- WARNING: This query might take several minutes to run. If it is taking more
 --   than an hour, then stop the query and contact us about alternative approaches.
 -- select distinct med_class from COVID_MED_PATHS order by med_class;
+--select * from COVID_MED_PATHS
+--join nightherondata.concept_dimension cd
+--cd.;
 create table COVID_MED_PATHS AS
 select concept_path, concept_cd
 	from nightherondata.concept_dimension
@@ -882,6 +886,7 @@ insert into covid_clinical_course
 	) t
 	group by days_since_admission
 ;
+-- select * from covid_date_list_temp;
 --34
 commit;    
 
@@ -984,17 +989,49 @@ insert into covid_labs
 commit;    
 
 --------------------------------------------------------------------------------
--- Create Diagnosis table.
--- * Select all ICD9 and ICD10 codes.
--- * Note that just the left 3 characters of the ICD codes should be used.
--- * Customize this query if your ICD codes do not have a prefix.
+-- ICD mapping
 --------------------------------------------------------------------------------
+drop table cd1;
+create table cd1
+as
+ select * 
+from nightherondata.concept_dimension cd1
+where cd1.concept_cd like'ICD10%'
+or cd1.concept_cd like'ICD9%';
+
+
+drop table ICD9_map purge;
+create table ICD9_map
+as
+select distinct cd1.concept_cd ICD9,cd2.concept_cd dx_id
+from cd1
+join nightherondata.concept_dimension cd2 
+    on cd2.concept_path like cd1.concept_path || '%'
+where cd1.concept_cd like 'ICD9:%'
+      and cd1.concept_cd <> cd2.concept_cd
+--    and cd2.concept_cd not like 'ICD10%'
+--    and cd2.concept_cd not like 'ICD9%'
+; 
+select *
+from icd9_map;
+
+
+drop table icd_map purge;
+create table icd_map
+as
+select c_basecode dx_id,pcori_basecode icd10
+from nightherondata.pcornet_diag
+where c_basecode like 'KUH|DX_ID%';
+
+drop table obs_fact purge;
 create table obs_fact
+nologging
+parallel
 as
 select ENCOUNTER_NUM ,
 PATIENT_NUM ,
 --CONCEPT_CD ,
-map.local_term concept_cd,
+COALESCE(icd_map.icd10,CONCEPT_CD) concept_cd,
 PROVIDER_ID ,
 START_DATE ,
 MODIFIER_CD ,
@@ -1016,10 +1053,23 @@ SOURCESYSTEM_CD ,
 UPLOAD_ID ,
 SUB_ENCOUNTER  
 from nightherondata.observation_fact fact
-join (select * from icd_map where local_term not like 'ICD%') map
-on fact.concept_cd = map.icd
-where fact.concept_cd like 'ICD%';
+left join icd_map
+on fact.concept_cd = icd_map.icd10
+--where fact.concept_cd like 'ICD%'
+;
+--select * from obs_fact;
+--select * from nightherondata.observation_fact
+--where patient_num =26387
+--;
+--in (select patient_num from covid_cohort);
 
+--------------------------------------------------------------------------------
+-- Create Diagnosis table.
+-- * Select all ICD9 and ICD10 codes.
+-- * Note that just the left 3 characters of the ICD codes should be used.
+-- * Customize this query if your ICD codes do not have a prefix.
+--------------------------------------------------------------------------------
+-- drop table covid_diagnoses purge;
 create table covid_diagnoses (
 	siteid varchar(50) not null,
 	icd_code_3chars varchar(10) not null,
@@ -1038,32 +1088,41 @@ insert into covid_diagnoses
 		sum(severe*since_admission)
 	from (
 		-- ICD9
-		select distinct p.patient_num, p.severe, 9 icd_version,
-			substr(substr(f.concept_cd, length(code_prefix_icd9cm)+1, 999), 1, 3) icd_code_3chars,
+		select distinct 
+            --icd9_map.ICD9 , f.concept_cd,
+            p.patient_num, p.severe, 9 icd_version,
+			substr(substr(icd9_map.icd9, length(code_prefix_icd9cm)+1, 999), 1, 3) icd_code_3chars,
 			(case when f.start_date <= (trunc(p.admission_date)-15) then 1 else 0 end) before_admission,
 			(case when f.start_date >= p.admission_date then 1 else 0 end) since_admission
 		from covid_config x
-			cross join obs_fact f
+			cross join nightherondata.observation_fact f
 			inner join covid_cohort p 
 				on f.patient_num=p.patient_num 
 					and f.start_date >= (trunc(p.admission_date)-365)
-		where concept_cd like 'KUH|DX_ID:'||'%' and 'KUH|DX_ID:' <> ''
-		-- ICD10
-		union all
-		select distinct p.patient_num, p.severe, 10 icd_version,
-			substr(substr(f.concept_cd, length(code_prefix_icd10cm)+1, 999), 1, 3) icd_code_3chars,
+            inner join icd9_map
+                on icd9_map.dx_id = f.concept_cd 
+		where concept_cd like 'KUH|DX_ID%'||'%' and icd9_map.icd9 is not null
+--		-- ICD10
+	union all
+		select distinct 
+           -- icd_map.ICD10 , f.concept_cd,
+            p.patient_num, p.severe, 10 icd_version,
+			substr(substr('ICD10:'||icd_map.icd10, length(code_prefix_icd10cm)+1, 999), 1, 3) icd_code_3chars,
 			(case when f.start_date <= (trunc(p.admission_date)-15) then 1 else 0 end) before_admission,
 			(case when f.start_date >= p.admission_date then 1 else 0 end) since_admission
 		from covid_config x
-			cross join obs_fact f
+			cross join nightherondata.observation_fact f
 			inner join covid_cohort p 
 				on f.patient_num=p.patient_num 
 					and f.start_date >= (trunc(p.admission_date)-365)
-		where concept_cd like 'KUH|DX_ID:'||'%' and 'KUH|DX_ID:' <> ''
+            inner join icd_map
+                 on icd_map.dx_id = f.concept_cd
+		where concept_cd like 'KUH|DX_ID%'||'%' and icd_map.icd10 is not null
+        --8446
 	) t
 	group by icd_code_3chars, icd_version;
 commit;    
--- TODO: 0 rows inserted
+-- 528 --954
 --------------------------------------------------------------------------------
 -- Create Medications table.
 --------------------------------------------------------------------------------
