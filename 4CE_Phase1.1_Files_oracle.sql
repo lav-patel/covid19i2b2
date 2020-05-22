@@ -739,8 +739,9 @@ insert into covid_demographics_temp (patient_num, race)
 			or
 			(x.hispanic_in_fact_table = 0 and m.code in ('hispanic_latino'))
 		)
--- no rows
-;commit;
+-- 0 rows (race from patient_dimension)
+;
+commit;
 
 -- (race from observation_fact)
 insert into covid_demographics_temp (patient_num, race)
@@ -757,6 +758,7 @@ insert into covid_demographics_temp (patient_num, race)
 			(x.hispanic_in_fact_table = 1 and m.code in ('hispanic_latino'))
 		)
 ;
+--133
 commit;        
 -- Make sure every patient has a sex, age_group, and race
 insert into covid_demographics_temp (patient_num, sex, age_group, race)
@@ -821,6 +823,7 @@ insert into covid_daily_counts
 		group by d.d
 	) d
 ;
+--76
 commit;    
 -- Set cumulative_patients_dead = -999 if you do not have accurate death data. 
 update covid_daily_counts
@@ -854,6 +857,7 @@ insert into covid_clinical_course
 	) t
 	group by days_since_admission
 ;
+--34
 commit;    
 
 --------------------------------------------------------------------------------
@@ -888,6 +892,7 @@ insert into covid_demographics
 		) r on c.patient_num=r.patient_num
 	group by sex, age_group, race
 ;
+--90
 commit;    
 -- Set counts = -999 if not including race.
 update covid_demographics
@@ -950,6 +955,7 @@ insert into covid_labs
 	) t
 	group by loinc, days_since_admission, lab_units
 ;
+--542
 commit;    
 
 --------------------------------------------------------------------------------
@@ -969,7 +975,7 @@ create table covid_diagnoses (
     constraint covid_diagnoses_pk primary key (icd_code_3chars, icd_version)
 );
 insert into covid_diagnoses
-	select '' siteid, icd_code_3chars, icd_version,
+	select 'KUMC' siteid, icd_code_3chars, icd_version,
 		sum(before_admission), 
 		sum(since_admission), 
 		sum(severe*before_admission), 
@@ -1045,45 +1051,45 @@ commit;
 -- Blur counts by adding a small random number.
 --------------------------------------------------------------------------------
 
-declare 
-        v_obfuscation_blur numeric(8,0);
-begin
-    select obfuscation_blur into v_obfuscation_blur from covid_config;
-	if v_obfuscation_blur > 0 THEN
-        
-        update covid_daily_counts
-            set cumulative_patients_all = cumulative_patients_all + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                cumulative_patients_severe = cumulative_patients_severe + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                cumulative_patients_dead = cumulative_patients_dead + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_pat_in_hosp_on_date = num_pat_in_hosp_on_date + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_pat_in_hospsevere_on_date = num_pat_in_hospsevere_on_date + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur         
-        ;commit;  
-        update covid_clinical_course
-            set num_pat_all_cur_in_hosp = num_pat_all_cur_in_hosp + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_pat_ever_severe_cur_hosp = num_pat_ever_severe_cur_hosp + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
-        ;commit;
-        update covid_demographics
-            set num_patients_all = num_patients_all + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_patients_ever_severe = num_patients_ever_severe + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
-        ;commit;
-        update covid_labs
-            set num_patients_all = num_patients_all + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_patients_ever_severe = num_patients_ever_severe + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
-        ;commit;
-        update covid_diagnoses
-            set num_pat_all_before_admission = num_pat_all_before_admission + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_pat_all_since_admission = num_pat_all_since_admission + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_pat_ever_severe_before_adm = num_pat_ever_severe_before_adm + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_pat_ever_severe_since_adm = num_pat_ever_severe_since_adm + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
-        ;commit;        
-        update covid_medications
-            set num_pat_all_before_admission = num_pat_all_before_admission + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_pat_all_since_admission = num_pat_all_since_admission + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_pat_ever_severe_before_adm = num_pat_ever_severe_before_adm + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_pat_ever_severe_since_adm = num_pat_ever_severe_since_adm + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
-        ;commit;        
-    end if;        
-end;
+--declare 
+--        v_obfuscation_blur numeric(8,0);
+--begin
+--    select obfuscation_blur into v_obfuscation_blur from covid_config;
+--	if v_obfuscation_blur > 0 THEN
+--        
+--        update covid_daily_counts
+--            set cumulative_patients_all = cumulative_patients_all + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                cumulative_patients_severe = cumulative_patients_severe + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                cumulative_patients_dead = cumulative_patients_dead + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_pat_in_hosp_on_date = num_pat_in_hosp_on_date + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_pat_in_hospsevere_on_date = num_pat_in_hospsevere_on_date + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur         
+--        ;commit;  
+--        update covid_clinical_course
+--            set num_pat_all_cur_in_hosp = num_pat_all_cur_in_hosp + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_pat_ever_severe_cur_hosp = num_pat_ever_severe_cur_hosp + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
+--        ;commit;
+--        update covid_demographics
+--            set num_patients_all = num_patients_all + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_patients_ever_severe = num_patients_ever_severe + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
+--        ;commit;
+--        update covid_labs
+--            set num_patients_all = num_patients_all + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_patients_ever_severe = num_patients_ever_severe + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
+--        ;commit;
+--        update covid_diagnoses
+--            set num_pat_all_before_admission = num_pat_all_before_admission + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_pat_all_since_admission = num_pat_all_since_admission + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_pat_ever_severe_before_adm = num_pat_ever_severe_before_adm + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_pat_ever_severe_since_adm = num_pat_ever_severe_since_adm + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
+--        ;commit;        
+--        update covid_medications
+--            set num_pat_all_before_admission = num_pat_all_before_admission + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_pat_all_since_admission = num_pat_all_since_admission + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_pat_ever_severe_before_adm = num_pat_ever_severe_before_adm + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_pat_ever_severe_since_adm = num_pat_ever_severe_since_adm + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
+--        ;commit;        
+--    end if;        
+--end;
 
 --------------------------------------------------------------------------------
 -- Mask small counts with "-99".
@@ -1153,19 +1159,19 @@ end;
 --------------------------------------------------------------------------------
 -- Delete small counts.
 --------------------------------------------------------------------------------
-declare 
-    v_obfuscation_sml_cnt_delete numeric(8,0); --v_obfuscation_small_count_delete: shortened to under 128 bytes
-begin
-    select obfuscation_small_count_delete into v_obfuscation_sml_cnt_delete from covid_config;
-    if v_obfuscation_sml_cnt_delete > 0 THEN
-        select obfuscation_small_count_mask into v_obfuscation_sml_cnt_delete from covid_config;
-        delete from covid_daily_counts where cumulative_patients_all<v_obfuscation_sml_cnt_delete;commit;
-        delete from covid_clinical_course where num_pat_all_cur_in_hosp<v_obfuscation_sml_cnt_delete;commit;
-        delete from covid_labs where num_patients_all<v_obfuscation_sml_cnt_delete;commit;
-        delete from covid_diagnoses where num_pat_all_before_admission<v_obfuscation_sml_cnt_delete and num_pat_all_since_admission<v_obfuscation_sml_cnt_delete;commit;
-        delete from covid_medications where num_pat_all_before_admission<v_obfuscation_sml_cnt_delete and num_pat_all_since_admission<v_obfuscation_sml_cnt_delete;commit;
-    end if;
-end;
+--declare 
+--    v_obfuscation_sml_cnt_delete numeric(8,0); --v_obfuscation_small_count_delete: shortened to under 128 bytes
+--begin
+--    select obfuscation_small_count_delete into v_obfuscation_sml_cnt_delete from covid_config;
+--    if v_obfuscation_sml_cnt_delete > 0 THEN
+--        select obfuscation_small_count_mask into v_obfuscation_sml_cnt_delete from covid_config;
+--        delete from covid_daily_counts where cumulative_patients_all<v_obfuscation_sml_cnt_delete;commit;
+--        delete from covid_clinical_course where num_pat_all_cur_in_hosp<v_obfuscation_sml_cnt_delete;commit;
+--        delete from covid_labs where num_patients_all<v_obfuscation_sml_cnt_delete;commit;
+--        delete from covid_diagnoses where num_pat_all_before_admission<v_obfuscation_sml_cnt_delete and num_pat_all_since_admission<v_obfuscation_sml_cnt_delete;commit;
+--        delete from covid_medications where num_pat_all_before_admission<v_obfuscation_sml_cnt_delete and num_pat_all_since_admission<v_obfuscation_sml_cnt_delete;commit;
+--    end if;
+--end;
 
 --******************************************************************************
 --******************************************************************************
