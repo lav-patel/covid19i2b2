@@ -1018,11 +1018,11 @@ insert into covid_diagnoses
 			(case when f.start_date <= (trunc(p.admission_date)-15) then 1 else 0 end) before_admission,
 			(case when f.start_date >= p.admission_date then 1 else 0 end) since_admission
 		from covid_config x
-			cross join nightherondata.observation_fact f
+			cross join obs_fact f
 			inner join covid_cohort p 
 				on f.patient_num=p.patient_num 
 					and f.start_date >= (trunc(p.admission_date)-365)
-		where concept_cd like code_prefix_icd9cm||'%' and code_prefix_icd9cm <> ''
+		where concept_cd like 'KUH|DX_ID:'||'%' and 'KUH|DX_ID:' <> ''
 		-- ICD10
 		union all
 		select distinct p.patient_num, p.severe, 10 icd_version,
@@ -1030,11 +1030,11 @@ insert into covid_diagnoses
 			(case when f.start_date <= (trunc(p.admission_date)-15) then 1 else 0 end) before_admission,
 			(case when f.start_date >= p.admission_date then 1 else 0 end) since_admission
 		from covid_config x
-			cross join nightherondata.observation_fact f
+			cross join obs_fact f
 			inner join covid_cohort p 
 				on f.patient_num=p.patient_num 
 					and f.start_date >= (trunc(p.admission_date)-365)
-		where concept_cd like code_prefix_icd10cm||'%' and code_prefix_icd10cm <> ''
+		where concept_cd like 'KUH|DX_ID:'||'%' and 'KUH|DX_ID:' <> ''
 	) t
 	group by icd_code_3chars, icd_version;
 commit;    
