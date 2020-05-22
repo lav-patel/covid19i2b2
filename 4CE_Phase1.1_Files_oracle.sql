@@ -964,6 +964,37 @@ commit;
 -- * Note that just the left 3 characters of the ICD codes should be used.
 -- * Customize this query if your ICD codes do not have a prefix.
 --------------------------------------------------------------------------------
+create table obs_fact
+as
+select ENCOUNTER_NUM ,
+PATIENT_NUM ,
+--CONCEPT_CD ,
+map.local_term concept_cd,
+PROVIDER_ID ,
+START_DATE ,
+MODIFIER_CD ,
+INSTANCE_NUM ,
+VALTYPE_CD ,
+TVAL_CHAR ,
+NVAL_NUM ,
+VALUEFLAG_CD ,
+QUANTITY_NUM ,
+UNITS_CD ,
+END_DATE ,
+LOCATION_CD ,
+OBSERVATION_BLOB ,
+CONFIDENCE_NUM ,
+UPDATE_DATE ,
+DOWNLOAD_DATE ,
+IMPORT_DATE ,
+SOURCESYSTEM_CD ,
+UPLOAD_ID ,
+SUB_ENCOUNTER  
+from nightherondata.observation_fact fact
+join (select * from icd_map where local_term not like 'ICD%') map
+on fact.concept_cd = map.icd
+where fact.concept_cd like 'ICD%';
+
 create table covid_diagnoses (
 	siteid varchar(50) not null,
 	icd_code_3chars varchar(10) not null,
