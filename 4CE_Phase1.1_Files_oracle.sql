@@ -309,7 +309,7 @@ insert into COVID_LAB_MAP
         select '2703-7','4005',1,'mmHg','PaO2' from dual
             union
         select '2703-7','4006',1,'mmHg','PaO2' from dual
-            union
+--            union
 --        select '2703-7','51988',1,'mmHg','PaO2' from dual
 -- TODO: all labs are mapped but unit conversion is remaning.
 	) t;
@@ -586,8 +586,8 @@ join nightherondata.concept_dimension cd2
 --    and cd2.concept_cd not like 'ICD10%'
 --    and cd2.concept_cd not like 'ICD9%'
 ;    
-select count(*) from ICD_MAP;
---65064297
+--select count(*) from ICD_MAP;
+----65064297
 --******************************************************************************
 --******************************************************************************
 --*** Determine which patients had severe disease or died
@@ -666,12 +666,12 @@ commit;
 /*
 eye ball server date vs death date
 */
-select * from covid_cohort
-where death_date < severe_date;
---0
-select * from covid_cohort
-where death_date >= severe_date;
---14
+--select * from covid_cohort
+--where death_date < severe_date;
+----0
+--select * from covid_cohort
+--where death_date >= severe_date;
+----14
 */
 --begin
 --    if exists (select * from covid_config where death_data_accurate = 1) then 
@@ -1056,7 +1056,7 @@ select c_basecode dx_id,pcori_basecode icd9
 from nightherondata.pcornet_diag
 where c_basecode like 'KUH|DX_ID%'
 and  pcornet_diag.c_fullname like '\PCORI\DIAGNOSIS\09%' ;
-select * from icd9_map;
+--select * from icd9_map;
 
 
 drop table icd_map purge;
@@ -1066,42 +1066,42 @@ select c_basecode dx_id,pcori_basecode icd10
 from nightherondata.pcornet_diag
 where c_basecode like 'KUH|DX_ID%'
 and  pcornet_diag.c_fullname like '\PCORI\DIAGNOSIS\10%' ;
-select * from icd_map;
-
-drop table obs_fact purge;
-create table obs_fact
-nologging
-parallel
-as
-select ENCOUNTER_NUM ,
-PATIENT_NUM ,
---CONCEPT_CD ,
-COALESCE(icd_map.icd10,CONCEPT_CD) concept_cd,
-PROVIDER_ID ,
-START_DATE ,
-MODIFIER_CD ,
-INSTANCE_NUM ,
-VALTYPE_CD ,
-TVAL_CHAR ,
-NVAL_NUM ,
-VALUEFLAG_CD ,
-QUANTITY_NUM ,
-UNITS_CD ,
-END_DATE ,
-LOCATION_CD ,
-OBSERVATION_BLOB ,
-CONFIDENCE_NUM ,
-UPDATE_DATE ,
-DOWNLOAD_DATE ,
-IMPORT_DATE ,
-SOURCESYSTEM_CD ,
-UPLOAD_ID ,
-SUB_ENCOUNTER  
-from nightherondata.observation_fact fact
-left join icd_map
-on fact.concept_cd = icd_map.icd10
---where fact.concept_cd like 'ICD%'
-;
+--select * from icd_map;
+--
+--drop table obs_fact purge;
+--create table obs_fact
+--nologging
+--parallel
+--as
+--select ENCOUNTER_NUM ,
+--PATIENT_NUM ,
+----CONCEPT_CD ,
+--COALESCE(icd_map.icd10,CONCEPT_CD) concept_cd,
+--PROVIDER_ID ,
+--START_DATE ,
+--MODIFIER_CD ,
+--INSTANCE_NUM ,
+--VALTYPE_CD ,
+--TVAL_CHAR ,
+--NVAL_NUM ,
+--VALUEFLAG_CD ,
+--QUANTITY_NUM ,
+--UNITS_CD ,
+--END_DATE ,
+--LOCATION_CD ,
+--OBSERVATION_BLOB ,
+--CONFIDENCE_NUM ,
+--UPDATE_DATE ,
+--DOWNLOAD_DATE ,
+--IMPORT_DATE ,
+--SOURCESYSTEM_CD ,
+--UPLOAD_ID ,
+--SUB_ENCOUNTER  
+--from nightherondata.observation_fact fact
+--left join icd_map
+--on fact.concept_cd = icd_map.icd10
+----where fact.concept_cd like 'ICD%'
+--;
 --select * from obs_fact;
 --select * from nightherondata.observation_fact
 --where patient_num =26387
