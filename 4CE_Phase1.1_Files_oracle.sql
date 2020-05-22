@@ -514,16 +514,16 @@ or cd1.concept_cd like'ICD9%';
 drop table ICD_map;
 create table ICD_map
 as
-select cd1.concept_cd ICD10,cd2.concept_cd dx_id
+select cd1.concept_cd ICD,cd2.concept_cd local_term
 from cd1
 join nightherondata.concept_dimension cd2 
     on cd2.concept_path like cd1.concept_path || '%'
-    and cd1.concept_cd <> cd2.concept_cd
-    and cd2.concept_cd not like 'ICD10%'
-    and cd2.concept_cd not like 'ICD9%'
+--    and cd1.concept_cd <> cd2.concept_cd
+--    and cd2.concept_cd not like 'ICD10%'
+--    and cd2.concept_cd not like 'ICD9%'
 ;    
 select count(*) from ICD_MAP;
---4457405
+--65064297
 --******************************************************************************
 --******************************************************************************
 --*** Determine which patients had severe disease or died
@@ -533,14 +533,17 @@ select count(*) from ICD_MAP;
 --------------------------------------------------------------------------------
 -- Flag the patients who had severe disease anytime since admission.
 --------------------------------------------------------------------------------
-create table covid_severe_patients (
-	patient_num number(8,0) not null,
-	severe_date date
-);
+--create table covid_severe_patients (
+--	patient_num number(8,0) not null,
+--	severe_date date
+--);
 -- Get a list of patients with severe codes
 -- WARNING: This query might take a few minutes to run.
-insert into covid_severe_patients
-	select f.patient_num, min(start_date) start_date
+--insert /*+ append */ into covid_severe_patients
+create table covid_severe_patients
+nologging parallel
+as
+	select f.patient_num, min(start_date) severe_date
 	from nightherondata.observation_fact f
 		inner join covid_cohort c
 			on f.patient_num = c.patient_num and f.start_date >= c.admission_date
@@ -551,24 +554,22 @@ insert into covid_severe_patients
 		-- Any severe medication
 		or f.concept_cd in (select local_med_code from covid_med_map where med_class in ('SIANES','SICARDIAC'))
 		-- Acute respiratory distress syndrome (diagnosis)
-        ---530
-        ;
-        select * 
-        from nightherondata.concept_dimension cd1
-        join nightherondata.concept_dimension cd2 
-            on cd1.concept_path like cd2.concept_path || '%'
-        where cd1.concept_cd='ICD10:J80';
-		or f.concept_cd in (code_prefix_icd10cm||'J80', code_prefix_icd9cm||'518.82')
+--		or f.concept_cd in (code_prefix_icd10cm||'J80', code_prefix_icd9cm||'518.82')
+        or f.concept_cd in (select distinct local_term from icd_map where icd in ('ICD10:J80','ICD9:518.82') )
 		-- Ventilator associated pneumonia (diagnosis)
-		or f.concept_cd in (code_prefix_icd10cm||'J95.851', code_prefix_icd9cm||'997.31')
+--		or f.concept_cd in (code_prefix_icd10cm||'J95.851', code_prefix_icd9cm||'997.31')
+        or f.concept_cd in (select distinct local_term from icd_map where icd in ('ICD10:J95.851','ICD9:997.31') )
 		-- Insertion of endotracheal tube (procedure)
-		or f.concept_cd in (code_prefix_icd10pcs||'0BH17EZ', code_prefix_icd9proc||'96.04')
+--		or f.concept_cd in (code_prefix_icd10pcs||'0BH17EZ', code_prefix_icd9proc||'96.04')
+        or f.concept_cd in (select distinct local_term from icd_map where icd in ('ICD10:0BH17EZ','ICD9:96.04') )
 		-- Invasive mechanical ventilation (procedure)
-		or regexp_like(f.concept_cd , code_prefix_icd10pcs||'5A09[345]{1}[A-Z0-9]?') --Converted to ORACLE Regex
-		or regexp_like(f.concept_cd , code_prefix_icd9proc||'96.7[012]{1}') --Converted to ORACLE Regex
+--		or regexp_like(f.concept_cd , code_prefix_icd10pcs||'5A09[345]{1}[A-Z0-9]?') --Converted to ORACLE Regex
+        or f.concept_cd in (select distinct local_term from icd_map where regexp_like (icd, 'ICD10:'||'5A09[345]{1}[A-Z0-9]?'))
+--		or regexp_like(f.concept_cd , code_prefix_icd9proc||'96.7[012]{1}') --Converted to ORACLE Regex
+        or f.concept_cd in (select distinct local_term from icd_map where regexp_like (icd, 'ICD9:'||'96.7[012]{1}'))
 	group by f.patient_num;
--- 49
-commit;    
+-- 49 --68
+  
 
 -- Update the covid_cohort table to flag severe patients 
 MERGE INTO COVID_COHORT c
@@ -598,7 +599,16 @@ join death_data d
 set t.OLD=t.NEW
 ;
 commit;
-
+/*
+eye ball server date vs death date
+*/
+select * from covid_cohort
+where death_date < severe_date;
+--0
+select * from covid_cohort
+where death_date >= severe_date;
+--14
+*/
 --begin
 --    if exists (select * from covid_config where death_data_accurate = 1) then 
 --        -- Get the death date from the patient_dimension table.
