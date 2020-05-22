@@ -180,18 +180,37 @@ select  f.concept_cd , f.units_cd, f.nval_num
 from nightherondata.observation_fact f
 where
 f.concept_cd in (
-'KUH|COMPONENT_ID:3094'
---'KUH|COMPONENT_ID:3761',
---'KUH|COMPONENT_ID:4003',
---'KUH|COMPONENT_ID:4004',
---'KUH|COMPONENT_ID:51936',
---'KUH|COMPONENT_ID:3176',
---'KUH|COMPONENT_ID:4005',
---'KUH|COMPONENT_ID:3093',
---'KUH|COMPONENT_ID:3094',
---'KUH|COMPONENT_ID:52032',
---'KUH|COMPONENT_ID:2328',
---'KUH|COMPONENT_ID:3016'
+'KUH|COMPONENT_ID:2065',
+'KUH|COMPONENT_ID:51082',
+'KUH|COMPONENT_ID:1',
+'KUH|COMPONENT_ID:2023',
+'KUH|COMPONENT_ID:51066',
+'KUH|COMPONENT_ID:2064',
+'KUH|COMPONENT_ID:51154',
+'KUH|COMPONENT_ID:2024',
+'KUH|COMPONENT_ID:52182',
+'KUH|COMPONENT_ID:3186',
+'KUH|COMPONENT_ID:3761',
+'KUH|COMPONENT_ID:4003',
+'KUH|COMPONENT_ID:4004',
+'KUH|COMPONENT_ID:51936',
+'KUH|COMPONENT_ID:2009',
+'KUH|COMPONENT_ID:51418',
+'KUH|COMPONENT_ID:3176',
+'KUH|COMPONENT_ID:2070',
+'KUH|COMPONENT_ID:4005',
+'KUH|COMPONENT_ID:4006',
+'KUH|COMPONENT_ID:51988',
+'KUH|COMPONENT_ID:3093',
+'KUH|COMPONENT_ID:664',
+'KUH|COMPONENT_ID:3094',
+'KUH|COMPONENT_ID:2326',
+'KUH|COMPONENT_ID:2327',
+'KUH|COMPONENT_ID:52032',
+'KUH|COMPONENT_ID:2328',
+'KUH|COMPONENT_ID:3009',
+'KUH|COMPONENT_ID:3016',
+'KUH|COMPONENT_ID:3012'
 )
 )
 select concept_cd , units_cd, count(*), avg(nval_num),MEDIAN(nval_num), stddev(nval_num)
@@ -1000,20 +1019,28 @@ where cd1.concept_cd like'ICD10%'
 or cd1.concept_cd like'ICD9%';
 
 
-drop table ICD9_map purge;
-create table ICD9_map
+--drop table ICD9_map purge;
+--create table ICD9_map
+--as
+--select distinct cd1.concept_cd ICD9,cd2.concept_cd dx_id
+--from cd1
+--join nightherondata.concept_dimension cd2 
+--    on cd2.concept_path like cd1.concept_path || '%'
+--where cd1.concept_cd like 'ICD9:%'
+--      and cd1.concept_cd <> cd2.concept_cd
+----    and cd2.concept_cd not like 'ICD10%'
+----    and cd2.concept_cd not like 'ICD9%'
+--; 
+--select *
+--from icd9_map;
+drop table icd9_map purge;
+create table icd9_map
 as
-select distinct cd1.concept_cd ICD9,cd2.concept_cd dx_id
-from cd1
-join nightherondata.concept_dimension cd2 
-    on cd2.concept_path like cd1.concept_path || '%'
-where cd1.concept_cd like 'ICD9:%'
-      and cd1.concept_cd <> cd2.concept_cd
---    and cd2.concept_cd not like 'ICD10%'
---    and cd2.concept_cd not like 'ICD9%'
-; 
-select *
-from icd9_map;
+select c_basecode dx_id,pcori_basecode icd9
+from nightherondata.pcornet_diag
+where c_basecode like 'KUH|DX_ID%'
+and  pcornet_diag.c_fullname like '\PCORI\DIAGNOSIS\09%' ;
+select * from icd9_map;
 
 
 drop table icd_map purge;
@@ -1021,7 +1048,9 @@ create table icd_map
 as
 select c_basecode dx_id,pcori_basecode icd10
 from nightherondata.pcornet_diag
-where c_basecode like 'KUH|DX_ID%';
+where c_basecode like 'KUH|DX_ID%'
+and  pcornet_diag.c_fullname like '\PCORI\DIAGNOSIS\10%' ;
+select * from icd_map;
 
 drop table obs_fact purge;
 create table obs_fact
@@ -1091,7 +1120,7 @@ insert into covid_diagnoses
 		select distinct 
             --icd9_map.ICD9 , f.concept_cd,
             p.patient_num, p.severe, 9 icd_version,
-			substr(substr(icd9_map.icd9, length(code_prefix_icd9cm)+1, 999), 1, 3) icd_code_3chars,
+			substr(substr('ICD9:'||icd9_map.icd9, length(code_prefix_icd9cm)+1, 999), 1, 3) icd_code_3chars,
 			(case when f.start_date <= (trunc(p.admission_date)-15) then 1 else 0 end) before_admission,
 			(case when f.start_date >= p.admission_date then 1 else 0 end) since_admission
 		from covid_config x
@@ -1101,7 +1130,7 @@ insert into covid_diagnoses
 					and f.start_date >= (trunc(p.admission_date)-365)
             inner join icd9_map
                 on icd9_map.dx_id = f.concept_cd 
-		where concept_cd like 'KUH|DX_ID%'||'%' and icd9_map.icd9 is not null
+		where concept_cd like 'KUH|DX_ID'||'%' and icd9_map.icd9 is not null
 --		-- ICD10
 	union all
 		select distinct 
@@ -1117,12 +1146,12 @@ insert into covid_diagnoses
 					and f.start_date >= (trunc(p.admission_date)-365)
             inner join icd_map
                  on icd_map.dx_id = f.concept_cd
-		where concept_cd like 'KUH|DX_ID%'||'%' and icd_map.icd10 is not null
+		where concept_cd like 'KUH|DX_ID'||'%' and icd_map.icd10 is not null
         --8446
 	) t
 	group by icd_code_3chars, icd_version;
 commit;    
--- 528 --954
+-- 528 --954 --530
 --------------------------------------------------------------------------------
 -- Create Medications table.
 --------------------------------------------------------------------------------
