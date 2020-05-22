@@ -173,6 +173,31 @@ join cp
 order by cd.concept_path
 ;
 */
+/*
+with f_unit as
+(
+select  f.concept_cd , f.units_cd
+from nightherondata.observation_fact f
+where
+f.concept_cd in (
+'KUH|COMPONENT_ID:3761',
+'KUH|COMPONENT_ID:4003',
+'KUH|COMPONENT_ID:4004',
+'KUH|COMPONENT_ID:51936',
+'KUH|COMPONENT_ID:3176',
+'KUH|COMPONENT_ID:4005',
+'KUH|COMPONENT_ID:3093',
+'KUH|COMPONENT_ID:3094',
+'KUH|COMPONENT_ID:52032',
+'KUH|COMPONENT_ID:2328',
+'KUH|COMPONENT_ID:3016'
+)
+)
+select concept_cd , units_cd, count(*)
+from f_unit
+group by concept_cd , units_cd
+order by concept_cd , count(*) DESC;
+*/
 --------------------------------------------------------------------------------
 create table COVID_LAB_MAP (
 	loinc varchar(20) not null, 
