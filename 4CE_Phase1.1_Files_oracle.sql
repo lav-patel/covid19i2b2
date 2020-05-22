@@ -148,9 +148,22 @@ commit;
 -- * The lab value will be multiplied by the scale_factor
 -- *   to convert from your units to the 4CE units.
 --eye ball it (Danc)
---select * from COVID_LAB_MAP lm
---left join dconnolly.counts_by_concept cbc on cbc.concept_cd = lm.local_lab_code
---order by lm.lab_name, patients desc;
+/*
+select replace(lm.local_lab_code,'KUH|COMPONENT_ID:','') from COVID_LAB_MAP lm
+left join dconnolly.counts_by_concept cbc on cbc.concept_cd = lm.local_lab_code
+--order by lm.lab_name, patients desc
+where cbc.facts is null;
+3761
+51154
+52032
+52182
+51082
+51418
+51988
+51066
+51936
+1
+*/
 -- TOD0: Apply scale_factor
 -- TOD0: find remaing labs
 /*
@@ -173,51 +186,54 @@ join cp
 order by cd.concept_path
 ;
 */
-/*
-with f_unit as
-(
-select  f.concept_cd , f.units_cd, f.nval_num
-from nightherondata.observation_fact f
-where
-f.concept_cd in (
-'KUH|COMPONENT_ID:2065',
-'KUH|COMPONENT_ID:51082',
-'KUH|COMPONENT_ID:1',
-'KUH|COMPONENT_ID:2023',
-'KUH|COMPONENT_ID:51066',
-'KUH|COMPONENT_ID:2064',
-'KUH|COMPONENT_ID:51154',
-'KUH|COMPONENT_ID:2024',
-'KUH|COMPONENT_ID:52182',
-'KUH|COMPONENT_ID:3186',
-'KUH|COMPONENT_ID:3761',
-'KUH|COMPONENT_ID:4003',
-'KUH|COMPONENT_ID:4004',
-'KUH|COMPONENT_ID:51936',
-'KUH|COMPONENT_ID:2009',
-'KUH|COMPONENT_ID:51418',
-'KUH|COMPONENT_ID:3176',
-'KUH|COMPONENT_ID:2070',
-'KUH|COMPONENT_ID:4005',
-'KUH|COMPONENT_ID:4006',
-'KUH|COMPONENT_ID:51988',
-'KUH|COMPONENT_ID:3093',
-'KUH|COMPONENT_ID:664',
-'KUH|COMPONENT_ID:3094',
-'KUH|COMPONENT_ID:2326',
-'KUH|COMPONENT_ID:2327',
-'KUH|COMPONENT_ID:52032',
-'KUH|COMPONENT_ID:2328',
-'KUH|COMPONENT_ID:3009',
-'KUH|COMPONENT_ID:3016',
-'KUH|COMPONENT_ID:3012'
-)
-)
-select concept_cd , units_cd, count(*), avg(nval_num),MEDIAN(nval_num), stddev(nval_num)
-from f_unit
-group by concept_cd , units_cd
-order by concept_cd , count(*) DESC;
-*/
+
+
+--with f_unit as
+--(
+--select  f.concept_cd , f.units_cd, f.nval_num
+--from nightherondata.observation_fact f
+--where
+--f.concept_cd in (
+--'KUH|COMPONENT_ID:2065',
+--'KUH|COMPONENT_ID:51082',
+--'KUH|COMPONENT_ID:1',
+--'KUH|COMPONENT_ID:2023',
+--'KUH|COMPONENT_ID:51066',
+--'KUH|COMPONENT_ID:2064',
+--'KUH|COMPONENT_ID:51154',
+--'KUH|COMPONENT_ID:2024',
+--'KUH|COMPONENT_ID:52182',
+--'KUH|COMPONENT_ID:3186',
+--'KUH|COMPONENT_ID:3761',
+--'KUH|COMPONENT_ID:4003',
+--'KUH|COMPONENT_ID:4004',
+--'KUH|COMPONENT_ID:51936',
+--'KUH|COMPONENT_ID:2009',
+--'KUH|COMPONENT_ID:51418',
+--'KUH|COMPONENT_ID:3176',
+--'KUH|COMPONENT_ID:2070',
+--'KUH|COMPONENT_ID:4005',
+--'KUH|COMPONENT_ID:4006',
+--'KUH|COMPONENT_ID:51988',
+--'KUH|COMPONENT_ID:3093',
+--'KUH|COMPONENT_ID:664',
+--'KUH|COMPONENT_ID:3094',
+--'KUH|COMPONENT_ID:2326',
+--'KUH|COMPONENT_ID:2327',
+--'KUH|COMPONENT_ID:52032',
+--'KUH|COMPONENT_ID:2328',
+--'KUH|COMPONENT_ID:3009',
+--'KUH|COMPONENT_ID:3016',
+--'KUH|COMPONENT_ID:3012'
+--)
+--)
+--select concept_cd , units_cd, count(*), avg(nval_num),MEDIAN(nval_num), stddev(nval_num)
+--from f_unit
+--group by concept_cd , units_cd
+--order by concept_cd , count(*) DESC;
+
+
+
 --------------------------------------------------------------------------------
 create table COVID_LAB_MAP (
 	loinc varchar(20) not null, 
@@ -238,30 +254,30 @@ insert into COVID_LAB_MAP
             union 
         select '731-0','3016',1,'10*3/uL','lymphocyte count' from dual
             union 
-        select '1751-7','1',1,'g/dL','albumin' from dual
-            union 
+--        select '1751-7','1',1,'g/dL','albumin' from dual
+--            union 
         select '1751-7','2023',1,'g/dL','albumin' from dual
             union 
-        select '1751-7','51066',1,'g/dL','albumin' from dual
-            union 
+--        select '1751-7','51066',1,'g/dL','albumin' from dual
+--            union 
         select '2532-0','2070',1,'U/L','lactate dehydrogenase (LDH)' from dual
             union 
         select '1742-6','2065',1,'U/L','alanine aminotransferase (ALT)' from dual
             union 
-        select '1742-6','51082',1,'U/L','alanine aminotransferase (ALT)' from dual
-            union 
+--        select '1742-6','51082',1,'U/L','alanine aminotransferase (ALT)' from dual
+--            union 
         select '1920-8','2064',1,'U/L','aspartate aminotransferase (AST)' from dual
             union 
-        select '1920-8','51154',1,'U/L','aspartate aminotransferase (AST)' from dual
-            union 
+--        select '1920-8','51154',1,'U/L','aspartate aminotransferase (AST)' from dual
+--            union 
         select '1975-2','2024',1,'mg/dL','total bilirubin' from dual
             union 
-        select '1975-2','52182',1,'mg/dL','total bilirubin' from dual
-            union 
+--        select '1975-2','52182',1,'mg/dL','total bilirubin' from dual
+--            union 
         select '2160-0','2009',1,'mg/dL','creatinine' from dual
             union 
-        select '2160-0','51418',1,'mg/dL','creatinine' from dual
-            union 
+--        select '2160-0','51418',1,'mg/dL','creatinine' from dual
+--            union 
         select '49563-0','2326',1,'ng/mL','cardiac troponin (High Sensitivity)' from dual
             union 
         select '49563-0','2327',1,'ng/mL','cardiac troponin (High Sensitivity)' from dual
@@ -272,8 +288,8 @@ insert into COVID_LAB_MAP
 --            union  -- dont have child of loinc ( 0 records) in HEORN
         select '48066-5','3094',1,'ng/mL{DDU}','D-dimer (DDU)' from dual
             union 
-        select '5902-2','52032',1,'s','prothrombin time (PT)' from dual
-            union 
+--        select '5902-2','52032',1,'s','prothrombin time (PT)' from dual
+--            union 
         select '33959-8','664',1,'ng/mL','procalcitonin' from dual
             union 
         select '1988-5','3186',1,'mg/L','C-reactive protein (CRP) (Normal Sensitivity)' from dual
@@ -282,19 +298,19 @@ insert into COVID_LAB_MAP
             union 
         select '2276-4','3176',1,'ng/mL','Ferritin' from dual
             union 
-        select '2019-8','3761',1,'mmHg','PaCO2' from dual
-            union 
+--        select '2019-8','3761',1,'mmHg','PaCO2' from dual
+--            union 
         select '2019-8','4003',1,'mmHg','PaCO2' from dual
             union    
         select '2019-8','4004',1,'mmHg','PaCO2' from dual
             union
-        select '2019-8','51936',1,'mmHg','PaCO2' from dual
-            union
+--        select '2019-8','51936',1,'mmHg','PaCO2' from dual
+--            union
         select '2703-7','4005',1,'mmHg','PaO2' from dual
             union
         select '2703-7','4006',1,'mmHg','PaO2' from dual
             union
-        select '2703-7','51988',1,'mmHg','PaO2' from dual
+--        select '2703-7','51988',1,'mmHg','PaO2' from dual
 -- TODO: all labs are mapped but unit conversion is remaning.
 	) t;
 commit;
@@ -1491,3 +1507,5 @@ end*/
   commit 64d83bd69c1a4d856c5150c08516d288afce1fb5
 Adapted to Oracle by Robert Bradford (UNC-CH) [rbrad@med.unc.edu]
 */
+
+
