@@ -1,10 +1,15 @@
+set echo on;
 
 --Cleanup scripts if necessary
-/*
+
+WHENEVER SQLERROR CONTINUE;
   drop table covid_config;
   drop table covid_code_map;
   drop table covid_lab_map;
   drop table covid_med_map;
+  drop table covid_med_paths;
+  drop table COVID_MED_PATHS_TEMP;
+  drop table COVID_MED_PATHS_TMP2;
   drop table covid_date_list_temp;
   drop table covid_demographics_temp;
   drop table covid_admissions;
@@ -17,7 +22,8 @@
   drop table covid_labs;
   drop table covid_medications;
   drop table covid_diagnoses;
-*/
+WHENEVER SQLERROR EXIT SQL.SQLCODE;
+
 --------------------------------------------------------------------------------
 -- General settings
 --------------------------------------------------------------------------------
@@ -39,27 +45,28 @@ create table covid_config (
 	output_as_csv number(1) -- Return the data in tables with a single column containing comma separated values
 );
 insert into COVID_CONFIG
-	select 'YOUR_ID', -- siteid
+	select 'KUMC', -- siteid
 		1, -- include_race
-		0, -- race_in_fact_table
-		0, -- hispanic_in_fact_table
+		1, -- race_in_fact_table
+		1, -- hispanic_in_fact_table
 		1, -- death_data_accurate
-		'DIAG|ICD9:', -- code_prefix_icd9cm
-		'DIAG|ICD10:', -- code_prefix_icd10cm
-		'PROC|ICD9:', -- code_prefix_icd9proc
-		'PROC|ICD10:', -- code_prefix_icd10pcs
+		'ICD9:', -- code_prefix_icd9cm   -- TOOD: Ask them what if we are using local code example dx_id
+		'ICD10:', -- code_prefix_icd10cm --select concept_cd from  Nightherondata.concept_dimension   where concept_path like '\i2b2\Diagnoses\ICD10\A20098492\A20160670\A18924177\%'
+		'ICD9:', -- code_prefix_icd9proc -- select concept_cd from  Nightherondata.CONCEPT_DIMENSION   where concept_path LIKE '\PCORI\PROCEDURE\09\(08-16.99) Ope~jf1y\(15) Operation~pru9\%';
+		'ICD10:', -- code_prefix_icd10pcs --select concept_cd from  Nightherondata.CONCEPT_DIMENSION   where concept_path LIKE '\PCORI\PROCEDURE\10\(4) Measuremen~ge9w\(4A) Measureme~dxgz\(4A1) Measurem~49bf\(4A13) Measure~djxw\%';
 		0, -- obfuscation_blur
-		10, -- obfuscation_small_count_mask
+		11, -- obfuscation_small_count_mask
 		0, -- obfuscation_small_count_delete
 		0, -- obfuscation_demographics
 		0, -- output_as_columns
 		1 -- output_as_csv
     from dual;    
 commit;
+-- TODO:??
 -- ! If your ICD codes do not start with a prefix (e.g., "ICD:"), then you will
 -- ! need to customize the query that populates the covid_diagnoses table so that
 -- ! only diagnosis codes are selected from the observation_fact table.
-
+-- TODO: what if diag and proc same prefix?
 --------------------------------------------------------------------------------
 -- Code mappings (excluding labs and meds)
 -- * Don't change the "code" value.
@@ -72,64 +79,65 @@ create table COVID_CODE_MAP (
     constraint COVID_CODEMAP_PK PRIMARY KEY (code, local_code)
 );
 
+--MW: If patients was in ED than become IP, it should be flagged as IP
+/*
+	212706
+UN	11948
+AV	991376
+ED	43266
+OT	99673
+IP	17761
+EI	20018
+OS	779
+OA	3021348
+*/
 -- Inpatient visits (visit_dimension.inout_cd)
 insert into  COVID_CODE_MAP
-	select 'inpatient', 'I' from dual
-        union all 
-    select 'inpatient', 'IN' from dual;
-    --UNC: 'INPATIENT'
+	select 'inpatient', 'IP' from dual -- select inout_cd, count (*) from nightherondata.visit_dimension group by inout_cd; --IP	17761
+;
+
 commit;    
--- Sex (patient_dimension.sex_cd)
+-- Sex (patient_dimension.sex_cd) -- select sex_cd, count(*) from nightherondata.patient_dimension group by sex_cd;
 insert into  COVID_CODE_MAP
-	select 'male', 'M' from dual
+	select 'male', 'm' from dual
         union all 
-    select 'male', 'Male' from dual
-        union all 
-    select 'female', 'F' from dual
-        union all 
-    select 'female', 'Female' from dual;
+    select 'female', 'f' from dual
+    ;
 commit;    
 -- Race (field based on covid_config.race_in_fact_table; ignore if you don't collect race/ethnicity)
 insert into  COVID_CODE_MAP
-	select 'american_indian', 'NA' from dual
+	select 'american_indian', 'DEM|RACE:amerian ind' from dual
         union all 
-    select 'asian', 'A' from dual
+    select 'asian', 'DEM|RACE:asian' from dual
         union all 
-    select 'asian', 'AS' from dual
+    select 'black', 'DEM|RACE:black' from dual
         union all 
-    select 'black', 'B' from dual
+    select 'hawaiian_pacific_islander', 'DEM|RACE:pac islander' from dual
         union all 
-    select 'hawaiian_pacific_islander', 'H' from dual
-        union all 
-    select 'hawaiian_pacific_islander', 'P' from dual
-        union all 
-    select 'white', 'W' from dual;
+    select 'white', 'DEM|RACE:white' from dual;
 commit; 
---UNC: white:'1', islander:'5', black:'2',asian:'4',native:'3'
 
 -- Hispanic/Latino (field based on covid_config.hispanic_in_fact_table; ignore if you don't collect race/ethnicity)
 insert into  COVID_CODE_MAP
-	select 'hispanic_latino', 'DEM|HISP:Y' from dual
+	select 'hispanic_latino', 'DEM|ETHNICITY:hispanic' from dual
         union all 
-    select 'hispanic_latino', 'DEM|HISPANIC:Y' from dual;
+    select 'hispanic_latino', 'DEM|ETHNICITY:his' from dual;
 commit; 
---UNC: HISP:'2',No:'1'
 
 -- Codes that indicate a positive COVID-19 test result (use either option #1 and/or option #2)
 -- COVID-19 Positive Option #1: individual concept_cd values
-insert into  COVID_CODE_MAP
-	select 'covidpos', 'LOINC:COVID19POS' from dual;
-commit;
+--insert into  COVID_CODE_MAP
+--	select 'covidpos', 'COVID-xyz-test:POSITIVE' from dual;
+--commit;
 
 -- COVID-19 Positive Option #2: an ontology path (the example here is the COVID ACT "Any Positive Test" path)
 insert into  COVID_CODE_MAP
 	select distinct 'covidpos', concept_cd
-	from concept_dimension c
+	from nightherondata.concept_dimension c
 	where concept_path like '\ACT\UMLS_C0031437\SNOMED_3947185011\UMLS_C0022885\UMLS_C1335447\%'
 		and concept_cd is not null
 		and not exists (select * from COVID_CODE_MAP m where m.code='covidpos' and m.local_code=c.concept_cd);
 commit;        
-
 --------------------------------------------------------------------------------
 -- Lab mappings
 -- * Do not change the loinc column or the lab_units column.
@@ -139,6 +147,93 @@ commit;
 -- * Change the scale_factor if you use different units.
 -- * The lab value will be multiplied by the scale_factor
 -- *   to convert from your units to the 4CE units.
+--eye ball it (Danc)
+/*
+select replace(lm.local_lab_code,'KUH|COMPONENT_ID:','') from COVID_LAB_MAP lm
+left join dconnolly.counts_by_concept cbc on cbc.concept_cd = lm.local_lab_code
+--order by lm.lab_name, patients desc
+where cbc.facts is null;
+3761
+51154
+52032
+52182
+51082
+51418
+51988
+51066
+51936
+1
+*/
+-- TOD0: Apply scale_factor
+-- TOD0: find remaing labs
+/*
+with cp as 
+(
+select concept_path
+from  NightHeronData.concept_dimension
+where concept_cd in (
+'LOINC:48066-5',
+'LOINC:3255-7'
+,'LOINC:2276-4'
+,'LOINC:2019-8'
+,'LOINC:2703-7'
+)
+)
+select *
+from NightHeronData.concept_dimension cd
+join cp
+    on cd.concept_path like  cp.concept_path|| '%'
+order by cd.concept_path
+;
+*/
+
+
+--with f_unit as
+--(
+--select  f.concept_cd , f.units_cd, f.nval_num
+--from nightherondata.observation_fact f
+--where
+--f.concept_cd in (
+--'KUH|COMPONENT_ID:2065',
+--'KUH|COMPONENT_ID:51082',
+--'KUH|COMPONENT_ID:1',
+--'KUH|COMPONENT_ID:2023',
+--'KUH|COMPONENT_ID:51066',
+--'KUH|COMPONENT_ID:2064',
+--'KUH|COMPONENT_ID:51154',
+--'KUH|COMPONENT_ID:2024',
+--'KUH|COMPONENT_ID:52182',
+--'KUH|COMPONENT_ID:3186',
+--'KUH|COMPONENT_ID:3761',
+--'KUH|COMPONENT_ID:4003',
+--'KUH|COMPONENT_ID:4004',
+--'KUH|COMPONENT_ID:51936',
+--'KUH|COMPONENT_ID:2009',
+--'KUH|COMPONENT_ID:51418',
+--'KUH|COMPONENT_ID:3176',
+--'KUH|COMPONENT_ID:2070',
+--'KUH|COMPONENT_ID:4005',
+--'KUH|COMPONENT_ID:4006',
+--'KUH|COMPONENT_ID:51988',
+--'KUH|COMPONENT_ID:3093',
+--'KUH|COMPONENT_ID:664',
+--'KUH|COMPONENT_ID:3094',
+--'KUH|COMPONENT_ID:2326',
+--'KUH|COMPONENT_ID:2327',
+--'KUH|COMPONENT_ID:52032',
+--'KUH|COMPONENT_ID:2328',
+--'KUH|COMPONENT_ID:3009',
+--'KUH|COMPONENT_ID:3016',
+--'KUH|COMPONENT_ID:3012'
+--)
+--)
+--select concept_cd , units_cd, count(*), avg(nval_num),MEDIAN(nval_num), stddev(nval_num)
+--from f_unit
+--group by concept_cd , units_cd
+--order by concept_cd , count(*) DESC;
+
+
+
 --------------------------------------------------------------------------------
 create table COVID_LAB_MAP (
 	loinc varchar(20) not null, 
@@ -150,62 +245,73 @@ create table COVID_LAB_MAP (
 );
 
 insert into COVID_LAB_MAP
-	select loinc, 'LOINC:'||local_lab_code,  -- Change "LOINC:" to your local LOINC code prefix (scheme)
+	select loinc, 'KUH|COMPONENT_ID:'||local_lab_code,  -- Change "LOINC:" to your local LOINC code prefix (scheme)
 		scale_factor, lab_units, lab_name
 	from (
-		select '6690-2' loinc, '6690-2' local_lab_code, 1 scale_factor, '10*3/uL' lab_units, 'white blood cell count (Leukocytes)' lab_name from dual   
+		select '6690-2' loinc, '3009' local_lab_code, 1 scale_factor, '10*3/uL' lab_units, 'white blood cell count (Leukocytes)' lab_name from dual   
             union 
-        select '6690-2', '12227-5', 1, '10*3/uL', 'white blood cell count (Leukocytes)' from dual
-            union     
-        select '751-8','751-8',1,'10*3/uL','neutrophil count' from dual
+        select '751-8','3012',1,'10*3/uL','neutrophil count' from dual
             union 
-        select '731-0','731-0',1,'10*3/uL','lymphocyte count' from dual
+        select '731-0','3016',1,'10*3/uL','lymphocyte count' from dual
             union 
-        select '1751-7','1752-5',1,'g/dL','albumin' from dual
+--        select '1751-7','1',1,'g/dL','albumin' from dual
+--            union 
+        select '1751-7','2023',1,'g/dL','albumin' from dual
             union 
-        select '2532-0','2532-0',1,'U/L','lactate dehydrogenase (LDH)' from dual
+--        select '1751-7','51066',1,'g/dL','albumin' from dual
+--            union 
+        select '2532-0','2070',1,'U/L','lactate dehydrogenase (LDH)' from dual
             union 
-        select '1742-6','1742-6',1,'U/L','alanine aminotransferase (ALT)' from dual
+        select '1742-6','2065',1,'U/L','alanine aminotransferase (ALT)' from dual
             union 
-        select '1920-8','1920-8',1,'U/L','aspartate aminotransferase (AST)' from dual
+--        select '1742-6','51082',1,'U/L','alanine aminotransferase (ALT)' from dual
+--            union 
+        select '1920-8','2064',1,'U/L','aspartate aminotransferase (AST)' from dual
             union 
-        select '1975-2','1975-2',1,'mg/dL','total bilirubin' from dual
+--        select '1920-8','51154',1,'U/L','aspartate aminotransferase (AST)' from dual
+--            union 
+        select '1975-2','2024',1,'mg/dL','total bilirubin' from dual
             union 
-        select '2160-0','2160-0',1,'mg/dL','creatinine' from dual
+--        select '1975-2','52182',1,'mg/dL','total bilirubin' from dual
+--            union 
+        select '2160-0','2009',1,'mg/dL','creatinine' from dual
             union 
-        select '49563-0','49563-0',1,'ng/mL','cardiac troponin (High Sensitivity)' from dual
+--        select '2160-0','51418',1,'mg/dL','creatinine' from dual
+--            union 
+        select '49563-0','2326',1,'ng/mL','cardiac troponin (High Sensitivity)' from dual
             union 
-        select '6598-7','6598-7',1,'ug/L','cardiac troponin (Normal Sensitivity)' from dual
+        select '49563-0','2327',1,'ng/mL','cardiac troponin (High Sensitivity)' from dual
             union 
-        select '6598-7','10839-9',1,'ug/L','cardiac troponin (Normal Sensitivity)' from dual
+        select '6598-7','2328',1,'ug/L','cardiac troponin (Normal Sensitivity)' from dual
+            union 
+--        select '48065-7','48065-7',1,'ng/mL{FEU}','D-dimer (FEU)' from dual
+--            union  -- dont have child of loinc ( 0 records) in HEORN
+        select '48066-5','3094',1,'ng/mL{DDU}','D-dimer (DDU)' from dual
+            union 
+--        select '5902-2','52032',1,'s','prothrombin time (PT)' from dual
+--            union 
+        select '33959-8','664',1,'ng/mL','procalcitonin' from dual
+            union 
+        select '1988-5','3186',1,'mg/L','C-reactive protein (CRP) (Normal Sensitivity)' from dual
+            union 
+        select '3255-7','3093',1,'mg/dL','Fibrinogen' from dual
+            union 
+        select '2276-4','3176',1,'ng/mL','Ferritin' from dual
+            union 
+--        select '2019-8','3761',1,'mmHg','PaCO2' from dual
+--            union 
+        select '2019-8','4003',1,'mmHg','PaCO2' from dual
             union    
-        select '48065-7','48065-7',1,'ng/mL{FEU}','D-dimer (FEU)' from dual
-            union 
-        select '48066-5','48066-5',1,'ng/mL{DDU}','D-dimer (DDU)' from dual
-            union 
-        select '5902-2','5902-2',1,'s','prothrombin time (PT)' from dual
-            union 
-        select '33959-8','33959-8',1,'ng/mL','procalcitonin' from dual
-            union 
-        select '1988-5','1988-5',1,'mg/L','C-reactive protein (CRP) (Normal Sensitivity)' from dual
-            union 
-        select '3255-7','3255-7',1,'mg/dL','Fibrinogen' from dual
-            union 
-        select '2276-4','2276-4',1,'ng/mL','Ferritin' from dual
-            union 
-        select '2019-8','2019-8',1,'mmHg','PaCO2' from dual
-            union 
-        select '2019-8','2021-4',1,'mmHg','PaCO2' from dual
-            union    
-        select '2019-8','2020-6',1,'mmHg','PaCO2' from dual
+        select '2019-8','4004',1,'mmHg','PaCO2' from dual
             union
-        select '2703-7','2703-7',1,'mmHg','PaO2' from dual
+--        select '2019-8','51936',1,'mmHg','PaCO2' from dual
+--            union
+        select '2703-7','4005',1,'mmHg','PaO2' from dual
             union
-        select '2703-7','2705-2',1,'mmHg','PaO2' from dual
-            union
-        select '2703-7','2704-5',1,'mmHg','PaO2' from dual
-		--union select '2703-7','second-code',1,'mmHg','PaO2'
-		--union select '2703-7','third-code',1,'mmHg','PaO2'
+        select '2703-7','4006',1,'mmHg','PaO2' from dual
+--            union
+--        select '2703-7','51988',1,'mmHg','PaO2' from dual
+-- TODO: all labs are mapped but unit conversion is remaning.
 	) t;
 commit;
 
@@ -218,16 +324,17 @@ commit;
 --   lab codes use different units than their parent code.
 -- WARNING: This query might take several minutes to run.
 /*
-insert into COVID_LAB_MAP
+create table COVID_LAB_MAP2 as select * from COVID_LAB_MAP where 1=0;
+insert into COVID_LAB_MAP2
 	select distinct l.loinc, d.concept_cd, l.scale_factor, l.lab_units, l.lab_name
 	from COVID_LAB_MAP l
-		inner join concept_dimension c
+		inner join nightherondata.concept_dimension c
 			on l.local_lab_code = c.concept_cd
-		inner join concept_dimension d
-			on d.concept_path like c.concept_path+'%'
+		inner join nightherondata.concept_dimension d
+			on d.concept_path like c.concept_path ||'%'
 	where not exists (
 		select *
-		from COVID_LAB_MAP t
+		from COVID_LAB_MAP2 t
 		where t.loinc = l.loinc and t.local_lab_code = d.concept_cd
 	);
 commit;    
@@ -241,33 +348,35 @@ commit;
 --------------------------------------------------------------------------------
 create table COVID_MED_MAP (
 	med_class varchar(50) not null,
-	code_type varchar(10) not null,
+	code_type varchar(20) not null,
 	local_med_code varchar(50) not null,
     constraint COVID_MEDMAP_PK primary key (med_class, code_type, local_med_code)
 );
 
+-- ALTER TABLE COVID_MED_MAP MODIFY code_type VARCHAR (20  );
 -- ATC codes (optional)
-insert into COVID_MED_MAP
-	select m, 'ATC' t, 'ATC:'||c  -- Change "ATC:" to your local ATC code prefix (scheme)
-	from (
-		-- Don't add or remove drugs
-		select 'ACEI' m, c from (select 'C09AA01' c from dual union select 'C09AA02' from dual union select 'C09AA03' from dual union select 'C09AA04' from dual union select 'C09AA05' from dual union select 'C09AA06' from dual union select 'C09AA07' from dual union select 'C09AA08' from dual union select 'C09AA09' from dual union select 'C09AA10' from dual union select 'C09AA11' from dual union select 'C09AA13' from dual union select 'C09AA15' from dual union select 'C09AA16' from dual) t
-		union select 'ARB', c from (select 'C09CA01' c from dual union select 'C09CA02' from dual union select 'C09CA03' from dual union select 'C09CA04' from dual union select 'C09CA06' from dual union select 'C09CA07' from dual union select 'C09CA08' from dual) t
-		union select 'COAGA', c from (select 'B01AC04' c from dual union select 'B01AC05' from dual union select 'B01AC07' from dual union select 'B01AC10' from dual union select 'B01AC13' from dual union select 'B01AC16' from dual union select 'B01AC17' from dual union select 'B01AC22' from dual union select 'B01AC24' from dual union select 'B01AC25' from dual union select 'B01AC26' from dual) t
-		union select 'COAGB', c from (select 'B01AA01' c from dual union select 'B01AA03' from dual union select 'B01AA04' from dual union select 'B01AA07' from dual union select 'B01AA11' from dual union select 'B01AB01' from dual union select 'B01AB04' from dual union select 'B01AB05' from dual union select 'B01AB06' from dual union select 'B01AB07' from dual union select 'B01AB08' from dual union select 'B01AB10' from dual union select 'B01AB12' from dual union select 'B01AE01' from dual union select 'B01AE02' from dual union select 'B01AE03' from dual union select 'B01AE06' from dual union select 'B01AE07' from dual union select 'B01AF01' from dual union select 'B01AF02' from dual union select 'B01AF03' from dual union select 'B01AF04' from dual union select 'B01AX05' from dual union select 'B01AX07' from dual) t
-		union select 'COVIDVIRAL', c from (select 'J05AE10' c from dual union select 'J05AP01' from dual union select 'J05AR10' from dual) t
-		union select 'DIURETIC', c from (select 'C03CA01' c from dual union select 'C03CA02' from dual union select 'C03CA03' from dual union select 'C03CA04' from dual union select 'C03CB01' from dual union select 'C03CB02' from dual union select 'C03CC01' from dual) t
-		union select 'HCQ', c from (select 'P01BA01' c from dual union select 'P01BA02' from dual) t
-		union select 'ILI', c from (select 'L04AC03' c from dual union select 'L04AC07' from dual union select 'L04AC11' from dual union select 'L04AC14' from dual) t
-		union select 'INTERFERON', c from (select 'L03AB08' c from dual union select 'L03AB11' from dual) t
-		union select 'SIANES', c from (select 'M03AC03' c from dual union select 'M03AC09' from dual union select 'M03AC11' from dual union select 'N01AX03' from dual union select 'N01AX10' from dual union select 'N05CD08' from dual union select 'N05CM18' from dual) t
-		union select 'SICARDIAC', c from (select 'B01AC09' c from dual union select 'C01CA03' from dual union select 'C01CA04' from dual union select 'C01CA06' from dual union select 'C01CA07' from dual union select 'C01CA24' from dual union select 'C01CE02' from dual union select 'C01CX09' from dual union select 'H01BA01' from dual union select 'R07AX01' from dual) t
-	) t;
-commit;    
+-- Use Rxnorm
+--insert into COVID_MED_MAP
+--	select m, 'ATC' t, 'ATC:'||c  -- Change "ATC:" to your local ATC code prefix (scheme)
+--	from (
+--		-- Don't add or remove drugs
+--		select 'ACEI' m, c from (select 'C09AA01' c from dual union select 'C09AA02' from dual union select 'C09AA03' from dual union select 'C09AA04' from dual union select 'C09AA05' from dual union select 'C09AA06' from dual union select 'C09AA07' from dual union select 'C09AA08' from dual union select 'C09AA09' from dual union select 'C09AA10' from dual union select 'C09AA11' from dual union select 'C09AA13' from dual union select 'C09AA15' from dual union select 'C09AA16' from dual) t
+--		union select 'ARB', c from (select 'C09CA01' c from dual union select 'C09CA02' from dual union select 'C09CA03' from dual union select 'C09CA04' from dual union select 'C09CA06' from dual union select 'C09CA07' from dual union select 'C09CA08' from dual) t
+--		union select 'COAGA', c from (select 'B01AC04' c from dual union select 'B01AC05' from dual union select 'B01AC07' from dual union select 'B01AC10' from dual union select 'B01AC13' from dual union select 'B01AC16' from dual union select 'B01AC17' from dual union select 'B01AC22' from dual union select 'B01AC24' from dual union select 'B01AC25' from dual union select 'B01AC26' from dual) t
+--		union select 'COAGB', c from (select 'B01AA01' c from dual union select 'B01AA03' from dual union select 'B01AA04' from dual union select 'B01AA07' from dual union select 'B01AA11' from dual union select 'B01AB01' from dual union select 'B01AB04' from dual union select 'B01AB05' from dual union select 'B01AB06' from dual union select 'B01AB07' from dual union select 'B01AB08' from dual union select 'B01AB10' from dual union select 'B01AB12' from dual union select 'B01AE01' from dual union select 'B01AE02' from dual union select 'B01AE03' from dual union select 'B01AE06' from dual union select 'B01AE07' from dual union select 'B01AF01' from dual union select 'B01AF02' from dual union select 'B01AF03' from dual union select 'B01AF04' from dual union select 'B01AX05' from dual union select 'B01AX07' from dual) t
+--		union select 'COVIDVIRAL', c from (select 'J05AE10' c from dual union select 'J05AP01' from dual union select 'J05AR10' from dual) t
+--		union select 'DIURETIC', c from (select 'C03CA01' c from dual union select 'C03CA02' from dual union select 'C03CA03' from dual union select 'C03CA04' from dual union select 'C03CB01' from dual union select 'C03CB02' from dual union select 'C03CC01' from dual) t
+--		union select 'HCQ', c from (select 'P01BA01' c from dual union select 'P01BA02' from dual) t
+--		union select 'ILI', c from (select 'L04AC03' c from dual union select 'L04AC07' from dual union select 'L04AC11' from dual union select 'L04AC14' from dual) t
+--		union select 'INTERFERON', c from (select 'L03AB08' c from dual union select 'L03AB11' from dual) t
+--		union select 'SIANES', c from (select 'M03AC03' c from dual union select 'M03AC09' from dual union select 'M03AC11' from dual union select 'N01AX03' from dual union select 'N01AX10' from dual union select 'N05CD08' from dual union select 'N05CM18' from dual) t
+--		union select 'SICARDIAC', c from (select 'B01AC09' c from dual union select 'C01CA03' from dual union select 'C01CA04' from dual union select 'C01CA06' from dual union select 'C01CA07' from dual union select 'C01CA24' from dual union select 'C01CE02' from dual union select 'C01CX09' from dual union select 'H01BA01' from dual union select 'R07AX01' from dual) t
+--	) t;
+--commit;    
 
 -- RxNorm codes (optional)
 insert into COVID_MED_MAP
-	select m, 'RxNorm' t, 'RxNorm:'||c  -- Change "RxNorm:" to your local RxNorm code prefix (scheme)
+	select m, 'RXNORM' t, 'RXNORM:'||c  -- Change "RxNorm:" to your local RxNorm code prefix (scheme)
 	from (
 		-- Don't add or remove drugs
 		select 'ACEI' m, c from (select '36908' c from dual union select '39990' from dual union select '104375' from dual union select '104376' from dual union select '104377' from dual union select '104378' from dual union select '104383' from dual union select '104384' from dual union select '104385' from dual union select '1299896' from dual union select '1299897' from dual union select '1299963' from dual union select '1299965' from dual union select '1435623' from dual union select '1435624' from dual union select '1435630' from dual union select '1806883' from dual union select '1806884' from dual union select '1806890' from dual union select '18867' from dual union select '197884' from dual union select '198187' from dual union select '198188' from dual union select '198189' from dual union select '199351' from dual union select '199352' from dual union select '199353' from dual union select '199622' from dual union select '199707' from dual union select '199708' from dual union select '199709' from dual union select '1998' from dual union select '199816' from dual union select '199817' from dual union select '199931' from dual union select '199937' from dual union select '205326' from dual union select '205707' from dual union select '205778' from dual union select '205779' from dual union select '205780' from dual union select '205781' from dual union select '206277' from dual union select '206313' from dual union select '206764' from dual union select '206765' from dual union select '206766' from dual union select '206771' from dual union select '207780' from dual union select '207792' from dual union select '207800' from dual union select '207820' from dual union select '207891' from dual union select '207892' from dual union select '207893' from dual union select '207895' from dual union select '210671' from dual union select '210672' from dual union select '210673' from dual union select '21102' from dual union select '211535' from dual union select '213482' from dual union select '247516' from dual union select '251856' from dual union select '251857' from dual union select '260333' from dual union select '261257' from dual union select '261258' from dual union select '261962' from dual union select '262076' from dual union select '29046' from dual union select '30131' from dual union select '308607' from dual union select '308609' from dual union select '308612' from dual union select '308613' from dual union select '308962' from dual union select '308963' from dual union select '308964' from dual union select '310063' from dual union select '310065' from dual union select '310066' from dual union select '310067' from dual union select '310422' from dual union select '311353' from dual union select '311354' from dual union select '311734' from dual union select '311735' from dual union select '312311' from dual union select '312312' from dual union select '312313' from dual union select '312748' from dual union select '312749' from dual union select '312750' from dual union select '313982' from dual union select '313987' from dual union select '314076' from dual union select '314077' from dual union select '314203' from dual union select '317173' from dual union select '346568' from dual union select '347739' from dual union select '347972' from dual union select '348000' from dual union select '35208' from dual union select '35296' from dual union select '371001' from dual union select '371254' from dual union select '371506' from dual union select '372007' from dual union select '372274' from dual union select '372614' from dual union select '372945' from dual union select '373293' from dual union select '373731' from dual union select '373748' from dual union select '373749' from dual union select '374176' from dual union select '374177' from dual union select '374938' from dual union select '378288' from dual union select '3827' from dual union select '38454' from dual union select '389182' from dual union select '389183' from dual union select '389184' from dual union select '393442' from dual union select '401965' from dual union select '401968' from dual union select '411434' from dual union select '50166' from dual union select '542702' from dual union select '542704' from dual union select '54552' from dual union select '60245' from dual union select '629055' from dual union select '656757' from dual union select '807349' from dual union select '845488' from dual union select '845489' from dual union select '854925' from dual union select '854927' from dual union select '854984' from dual union select '854986' from dual union select '854988' from dual union select '854990' from dual union select '857169' from dual union select '857171' from dual union select '857183' from dual union select '857187' from dual union select '857189' from dual union select '858804' from dual union select '858806' from dual union select '858810' from dual union select '858812' from dual union select '858813' from dual union select '858815' from dual union select '858817' from dual union select '858819' from dual union select '858821' from dual union select '898687' from dual union select '898689' from dual union select '898690' from dual union select '898692' from dual union select '898719' from dual union select '898721' from dual union select '898723' from dual union select '898725' from dual ) t
@@ -284,13 +393,21 @@ insert into COVID_MED_MAP
 	) t;
 commit;
 -- Remdesivir defined separately since many sites will have custom codes (optional)
-insert into COVID_MED_MAP
-	select 'REMDESIVIR', 'RxNorm', 'RxNorm:2284718' from dual 
-        union 
-    select 'REMDESIVIR', 'RxNorm', 'RxNorm:2284960' from dual 
-        union 
-    select 'REMDESIVIR', 'Custom', 'ACT|LOCAL:REMDESIVIR' from dual; 
-commit;
+/*
+ select * from clarity.clarity_medication where upper(name) like '%REMDESIVIR%';
+ /*
+ 213022	(INV) REMDESIVIR (HSC ######) 100 MG/20 ML (5 MG/ML) IJ SOLR
+213023	(INV) REMDESIVIR (HSC ######) 100 MG/20 ML (5 MG/ML) IV SOLUTION
+252863	(INV) REMDESIVIR (HSC ######) IVPB
+-- TODO: Bring Remdesivir to HERON as they are not brought to heron from clairty.
+*/
+--insert into COVID_MED_MAP
+--	select 'REMDESIVIR', 'RXNORM', 'RXNORM:2284718' from dual 
+--        union 
+--    select 'REMDESIVIR', 'RXNORM', 'RXNORM:2284960' from dual 
+--        union 
+--    select 'REMDESIVIR', 'Custom', 'ACT|LOCAL:REMDESIVIR' from dual; 
+--commit;
 
 -- Use the concept_dimension to get an expanded list of medication codes (optional)
 -- Uncomment the query below to run this as part of the script.
@@ -300,18 +417,33 @@ commit;
 --   and then find all the concepts corresponding to child paths.
 -- WARNING: This query might take several minutes to run. If it is taking more
 --   than an hour, then stop the query and contact us about alternative approaches.
-/*
+-- select distinct med_class from COVID_MED_PATHS order by med_class;
+--select * from COVID_MED_PATHS
+--join nightherondata.concept_dimension cd
+--cd.;
 create table COVID_MED_PATHS AS
 select concept_path, concept_cd
-	from concept_dimension
-	where concept_path like '\ACT\Medications\%'
-		and concept_cd in (select concept_cd from observation_fact); 
+	from nightherondata.concept_dimension
+	where concept_path like '\ACT\Medications\MedicationsByVaClass\V2_09302018\%' -- '\ACT\Medications\MedicationsByAlpha\V2_12112018\RxNormUMLSRxNav\%' --
+		and concept_cd in (select concept_cd from nightherondata.observation_fact)
+        ; 
 alter table COVID_MED_PATHS add constraint COVID_MEDPATHS_PK primary key (concept_path);
+--alter table COVID_MED_PATHS drop constraint COVID_MEDPATHS_PK;
 alter table COVID_MED_PATHS add med_class varchar(50);
-insert into COVID_MED_PATHS
-	select distinct 'Expand', d.concept_cd, m.med_class
+-------------------------------------------------------
+-- COVID_MED_PATHS_TEMP
+-------------------------------------------------------
+
+create table COVID_MED_PATHS_TEMP
+as
+select * from COVID_MED_PATHS where 1=0;
+insert into COVID_MED_PATHS_TEMP
+	select distinct 
+--    'Expand',
+    c.concept_path ||m.local_med_code ,
+    d.concept_cd, m.med_class
 	from COVID_MED_MAP m
-		inner join concept_dimension c
+		inner join nightherondata.concept_dimension c
 			on m.local_med_code = c.concept_cd
 		inner join COVID_MED_PATHS d
 			on d.concept_path like c.concept_path||'%'
@@ -320,9 +452,39 @@ insert into COVID_MED_PATHS
 		from COVID_MED_MAP t
 		where t.med_class = m.med_class and t.local_med_code = d.concept_cd
 	);
-commit;    
-*/
+commit;  
+-------------------------------------------------------
+-- COVID_MED_PATHS_TEMP2
+-------------------------------------------------------
 
+create table COVID_MED_PATHS_TMP2
+as
+select concept_path,concept_cd,med_class
+from COVID_MED_PATHS_TEMP
+group by concept_path,concept_cd,med_class;
+--alter table COVID_MED_PATHS_TEMP2 add constraint COVID_MEDPATHS2_PK primary key (concept_path);
+
+insert into COVID_MED_PATHS
+select 
+concept_path || concept_cd as concept_path,
+concept_cd,
+med_class
+from COVID_MED_PATHS_TMP2;
+where concept_path not in (select concept_path from COVID_MED_PATHS);
+
+-- insert mapping into covid_med_map
+insert into COVID_MED_MAP
+select distinct
+med_class
+,REGEXP_SUBSTR(concept_cd, '[^:]+') as code_type
+,concept_cd as local_med_code
+from COVID_MED_PATHS
+where med_class is not null
+and  med_class || REGEXP_SUBSTR(concept_cd, '[^:]+') || concept_cd
+not in (
+select med_class||code_type||local_med_code from covid_med_map
+);
+commit;
 --##############################################################################
 --### Most sites will not have to modify any SQL beyond this point.
 --### However, review the queries to see if you need to customize them
@@ -350,10 +512,11 @@ create table covid_pos_patients (
 
 insert into covid_pos_patients
 	select patient_num, cast(min(start_date) as date) covid_pos_date
-	from observation_fact f
+	from nightherondata.observation_fact f
 		inner join covid_code_map m
 			on f.concept_cd = m.local_code and m.code = 'covidpos'
 	group by patient_num;
+--451
 commit;    
 
 --------------------------------------------------------------------------------
@@ -368,13 +531,13 @@ create table covid_admissions (
 );
 
 insert into covid_admissions
-	select distinct v.patient_num, cast(start_date as date), cast(coalesce(end_date,current_date) as date)
-	from visit_dimension v
-		inner join covid_pos_patients p
-			on v.patient_num=p.patient_num 
-				and v.start_date >= (trunc(p.covid_pos_date)-7)
-		inner join covid_code_map m
-			on v.inout_cd = m.local_code and m.code = 'inpatient';
+    select distinct v.patient_num, cast(start_date as date), cast(coalesce(end_date,current_date) as date)
+    from (select patient_num, start_date, end_date from nightherondata.observation_fact where concept_cd = 'KUH|HOSP_ADT_CLASS:101') v
+        inner join covid_pos_patients p
+            on v.patient_num=p.patient_num
+            and v.start_date >= (trunc(p.covid_pos_date)-7)
+;            
+--159 
 commit;
 
 --------------------------------------------------------------------------------
@@ -398,8 +561,33 @@ insert into covid_cohort
 			on p.patient_num = a.patient_num	
 				and a.admission_date <= (trunc(covid_pos_date)+14)
 	group by p.patient_num;
+--138
 commit;
+--------------------------------------------------------------------------------
+-- ICD mapping
+--------------------------------------------------------------------------------
+drop table cd1;
+create table cd1
+as
+ select * 
+from nightherondata.concept_dimension cd1
+where cd1.concept_cd like'ICD10%'
+or cd1.concept_cd like'ICD9%';
 
+
+drop table ICD_map;
+create table ICD_map
+as
+select cd1.concept_cd ICD,cd2.concept_cd local_term
+from cd1
+join nightherondata.concept_dimension cd2 
+    on cd2.concept_path like cd1.concept_path || '%'
+--    and cd1.concept_cd <> cd2.concept_cd
+--    and cd2.concept_cd not like 'ICD10%'
+--    and cd2.concept_cd not like 'ICD9%'
+;    
+--select count(*) from ICD_MAP;
+----65064297
 --******************************************************************************
 --******************************************************************************
 --*** Determine which patients had severe disease or died
@@ -409,15 +597,18 @@ commit;
 --------------------------------------------------------------------------------
 -- Flag the patients who had severe disease anytime since admission.
 --------------------------------------------------------------------------------
-create table covid_severe_patients (
-	patient_num number(8,0) not null,
-	severe_date date
-);
+--create table covid_severe_patients (
+--	patient_num number(8,0) not null,
+--	severe_date date
+--);
 -- Get a list of patients with severe codes
 -- WARNING: This query might take a few minutes to run.
-insert into covid_severe_patients
-	select f.patient_num, min(start_date) start_date
-	from observation_fact f
+--insert /*+ append */ into covid_severe_patients
+create table covid_severe_patients
+nologging parallel
+as
+	select f.patient_num, min(start_date) severe_date
+	from nightherondata.observation_fact f
 		inner join covid_cohort c
 			on f.patient_num = c.patient_num and f.start_date >= c.admission_date
 		cross apply covid_config x
@@ -427,16 +618,22 @@ insert into covid_severe_patients
 		-- Any severe medication
 		or f.concept_cd in (select local_med_code from covid_med_map where med_class in ('SIANES','SICARDIAC'))
 		-- Acute respiratory distress syndrome (diagnosis)
-		or f.concept_cd in (code_prefix_icd10cm||'J80', code_prefix_icd9cm||'518.82')
+--		or f.concept_cd in (code_prefix_icd10cm||'J80', code_prefix_icd9cm||'518.82')
+        or f.concept_cd in (select distinct local_term from icd_map where icd in ('ICD10:J80','ICD9:518.82') )
 		-- Ventilator associated pneumonia (diagnosis)
-		or f.concept_cd in (code_prefix_icd10cm||'J95.851', code_prefix_icd9cm||'997.31')
+--		or f.concept_cd in (code_prefix_icd10cm||'J95.851', code_prefix_icd9cm||'997.31')
+        or f.concept_cd in (select distinct local_term from icd_map where icd in ('ICD10:J95.851','ICD9:997.31') )
 		-- Insertion of endotracheal tube (procedure)
-		or f.concept_cd in (code_prefix_icd10pcs||'0BH17EZ', code_prefix_icd9proc||'96.04')
+--		or f.concept_cd in (code_prefix_icd10pcs||'0BH17EZ', code_prefix_icd9proc||'96.04')
+        or f.concept_cd in (select distinct local_term from icd_map where icd in ('ICD10:0BH17EZ','ICD9:96.04') )
 		-- Invasive mechanical ventilation (procedure)
-		or regexp_like(f.concept_cd , code_prefix_icd10pcs||'5A09[345]{1}[A-Z0-9]?') --Converted to ORACLE Regex
-		or regexp_like(f.concept_cd , code_prefix_icd9proc||'96.7[012]{1}') --Converted to ORACLE Regex
+--		or regexp_like(f.concept_cd , code_prefix_icd10pcs||'5A09[345]{1}[A-Z0-9]?') --Converted to ORACLE Regex
+        or f.concept_cd in (select distinct local_term from icd_map where regexp_like (icd, 'ICD10:'||'5A09[345]{1}[A-Z0-9]?'))
+--		or regexp_like(f.concept_cd , code_prefix_icd9proc||'96.7[012]{1}') --Converted to ORACLE Regex
+        or f.concept_cd in (select distinct local_term from icd_map where regexp_like (icd, 'ICD9:'||'96.7[012]{1}'))
 	group by f.patient_num;
-commit;    
+-- 49 --68
+  
 
 -- Update the covid_cohort table to flag severe patients 
 MERGE INTO COVID_COHORT c
@@ -450,33 +647,59 @@ commit;
 --------------------------------------------------------------------------------
 -- Add death dates to patients who have died.
 --------------------------------------------------------------------------------
-begin
-    if exists (select * from covid_config where death_data_accurate = 1) then 
-        -- Get the death date from the patient_dimension table.
-        update covid_cohort c
-            set c.death_date = (
-                select 
-                    case when p.death_date > coalesce(severe_date,admission_date) 
-                    then p.death_date 
-                    else coalesce(severe_date,admission_date) end
-                from covid_cohort c
-                   inner join patient_dimension p on p.patient_num = c.patient_num
-            )
-            where exists (select c.patient_num from patient_dimension p where p.patient_num = c.patient_num and (p.death_date is not null or p.vital_status_cd in ('Y'))); 
-        commit;
-        -- Check that there aren't more recent facts for the deceased patients.
-        update covid_cohort c
-            set c.death_date = (
-                select max(f.start_date) death_date
-                from covid_cohort p
-                   inner join observation_fact f
-                      on f.patient_num = p.patient_num
-                where p.death_date is not null and f.start_date > p.death_date
-            )
-            where c.death_date is not null; 
-        commit;
-    end if;            
-end;
+update
+(
+with death_data as
+(
+select patient_num, death_date from nightherondata.patient_dimension
+where patient_num in (select patient_num from covid_cohort)
+    and death_date is not null
+)
+select c.death_date as OLD ,d.death_date as NEW
+from covid_cohort c
+join death_data d
+    on c.patient_num = d.patient_num
+)t
+set t.OLD=t.NEW
+;
+commit;
+/*
+eye ball server date vs death date
+*/
+--select * from covid_cohort
+--where death_date < severe_date;
+----0
+--select * from covid_cohort
+--where death_date >= severe_date;
+----14
+*/
+--begin
+--    if exists (select * from covid_config where death_data_accurate = 1) then 
+--        -- Get the death date from the patient_dimension table.
+--        update covid_cohort c
+--            set c.death_date = (
+--                select 
+--                    case when p.death_date > coalesce(severe_date,admission_date) 
+--                    then p.death_date 
+--                    else coalesce(severe_date,admission_date) end
+--                from covid_cohort c
+--                   inner join patient_dimension p on p.patient_num = c.patient_num
+--            )
+--            where exists (select c.patient_num from patient_dimension p where p.patient_num = c.patient_num and (p.death_date is not null or p.vital_status_cd in ('Y'))); 
+--        commit;
+--        -- Check that there aren't more recent facts for the deceased patients.
+--        update covid_cohort c
+--            set c.death_date = (
+--                select max(f.start_date) death_date
+--                from covid_cohort p
+--                   inner join observation_fact f
+--                      on f.patient_num = p.patient_num
+--                where p.death_date is not null and f.start_date > p.death_date
+--            )
+--            where c.death_date is not null; 
+--        commit;
+--    end if;            
+--end;
 
 
 --******************************************************************************
@@ -530,7 +753,7 @@ create table covid_demographics_temp (
 -- Get patients' sex
 insert into covid_demographics_temp (patient_num, sex)
 	select patient_num, m.code
-	from patient_dimension p
+	from nightherondata.patient_dimension p
 		inner join covid_code_map m
 			on p.sex_cd = m.local_code
 				and m.code in ('male','female')
@@ -562,7 +785,7 @@ insert into covid_demographics_temp (patient_num, age_group)
 			when floor(months_between(sysdate, birth_date)/12) between 70 and 79 then '70to79'
 			when floor(months_between(sysdate, birth_date)/12) >= 80 then '80plus'
 			else 'other' end) age
-	from patient_dimension
+	from nightherondata.patient_dimension
 	where patient_num in (select patient_num from covid_cohort);
 commit;    
 -- Get patients' race(s)
@@ -570,7 +793,7 @@ commit;
 insert into covid_demographics_temp (patient_num, race)
 	select p.patient_num, m.code
 	from covid_config x
-		cross join patient_dimension p
+		cross join nightherondata.patient_dimension p
 		inner join covid_code_map m
 			on p.race_cd = m.local_code
 	where p.patient_num in (select patient_num from covid_cohort)
@@ -580,13 +803,15 @@ insert into covid_demographics_temp (patient_num, race)
 			or
 			(x.hispanic_in_fact_table = 0 and m.code in ('hispanic_latino'))
 		)
-;commit;
+-- 0 rows (race from patient_dimension)
+;
+commit;
 
 -- (race from observation_fact)
 insert into covid_demographics_temp (patient_num, race)
 	select f.patient_num, m.code
 	from covid_config x
-		cross join observation_fact f
+		cross join nightherondata.observation_fact f
 		inner join covid_code_map m
 			on f.concept_cd = m.local_code
 	where f.patient_num in (select patient_num from covid_cohort)
@@ -596,7 +821,9 @@ insert into covid_demographics_temp (patient_num, race)
 			or
 			(x.hispanic_in_fact_table = 1 and m.code in ('hispanic_latino'))
 		)
-;commit;        
+;
+--133
+commit;        
 -- Make sure every patient has a sex, age_group, and race
 insert into covid_demographics_temp (patient_num, sex, age_group, race)
 	select patient_num, 'other', null, null
@@ -610,7 +837,8 @@ insert into covid_demographics_temp (patient_num, sex, age_group, race)
 	select patient_num, null, null, 'other'
 		from covid_cohort
 		where patient_num not in (select patient_num from covid_demographics_temp where race is not null)
-;commit;
+;
+commit;
 
 --******************************************************************************
 --******************************************************************************
@@ -633,7 +861,7 @@ create table covid_daily_counts (
 );
 
 insert into covid_daily_counts
-	select '' siteid, d.*,
+	select 'KUMC' siteid, d.*,
 		(select count(distinct c.patient_num)
 			from covid_admissions p
 				inner join covid_cohort c
@@ -658,12 +886,15 @@ insert into covid_daily_counts
 			cross join covid_cohort c
 		group by d.d
 	) d
-;commit;    
+;
+--76
+commit;    
 -- Set cumulative_patients_dead = -999 if you do not have accurate death data. 
 update covid_daily_counts
 	set cumulative_patients_dead = -999
 	where exists (select * from covid_config where death_data_accurate = 0)
-;commit;    
+;
+commit;    
 
 --------------------------------------------------------------------------------
 -- Create ClinicalCourse table.
@@ -676,7 +907,7 @@ create table covid_clinical_course (
     constraint covid_clinicalcourse_pk primary key (days_since_admission)
 );
 insert into covid_clinical_course
-	select '' siteid, days_since_admission, 
+	select 'KUMC' siteid, days_since_admission, 
 		count(*),
 		sum(severe)
 	from (
@@ -689,7 +920,10 @@ insert into covid_clinical_course
 				on p.patient_num=c.patient_num and p.admission_date>=c.admission_date
 	) t
 	group by days_since_admission
-;commit;    
+;
+-- select * from covid_date_list_temp;
+--34
+commit;    
 
 --------------------------------------------------------------------------------
 -- Create Demographics table.
@@ -704,7 +938,7 @@ create table covid_demographics (
     constraint covid_demographics_pk primary key (sex, age_group, race)
 );
 insert into covid_demographics
-	select '' siteid, sex, age_group, race, count(*), sum(severe)
+	select 'KUMC' siteid, sex, age_group, race, count(*), sum(severe)
 	from covid_cohort c
 		inner join (
 			select patient_num, sex from covid_demographics_temp where sex is not null
@@ -722,12 +956,15 @@ insert into covid_demographics
 			select patient_num, 'all' from covid_cohort
 		) r on c.patient_num=r.patient_num
 	group by sex, age_group, race
-;commit;    
+;
+--90
+commit;    
 -- Set counts = -999 if not including race.
 update covid_demographics
 	set num_patients_all = -999, num_patients_ever_severe = -999
 	where exists (select * from covid_config where include_race = 0)
-;commit;
+;
+commit;
 --------------------------------------------------------------------------------
 -- Create Labs table.
 --------------------------------------------------------------------------------
@@ -749,7 +986,7 @@ create table covid_labs (
     constraint covid_labs_pk primary key (loinc, days_since_admission)
 );
 insert into covid_labs
-	select '' siteid, loinc, days_since_admission, lab_units,
+	select 'KUMC' siteid, loinc, days_since_admission, lab_units,
 		count(*), 
 		avg(val), 
 		coalesce(stddev(val),0),
@@ -768,7 +1005,7 @@ insert into covid_labs
 			select l.loinc, l.lab_units, f.patient_num, p.severe,
 				trunc(p.admission_date) - trunc(f.start_date) days_since_admission,
 				f.nval_num*l.scale_factor val
-			from observation_fact f
+			from nightherondata.observation_fact f
 				inner join covid_cohort p 
 					on f.patient_num=p.patient_num
 				inner join covid_lab_map l
@@ -782,7 +1019,94 @@ insert into covid_labs
 		group by loinc, lab_units, patient_num, severe, days_since_admission
 	) t
 	group by loinc, days_since_admission, lab_units
-;commit;    
+;
+--542
+commit;    
+
+--------------------------------------------------------------------------------
+-- ICD mapping
+--------------------------------------------------------------------------------
+drop table cd1;
+create table cd1
+as
+ select * 
+from nightherondata.concept_dimension cd1
+where cd1.concept_cd like'ICD10%'
+or cd1.concept_cd like'ICD9%';
+
+
+--drop table ICD9_map purge;
+--create table ICD9_map
+--as
+--select distinct cd1.concept_cd ICD9,cd2.concept_cd dx_id
+--from cd1
+--join nightherondata.concept_dimension cd2 
+--    on cd2.concept_path like cd1.concept_path || '%'
+--where cd1.concept_cd like 'ICD9:%'
+--      and cd1.concept_cd <> cd2.concept_cd
+----    and cd2.concept_cd not like 'ICD10%'
+----    and cd2.concept_cd not like 'ICD9%'
+--; 
+--select *
+--from icd9_map;
+drop table icd9_map purge;
+create table icd9_map
+as
+select c_basecode dx_id,pcori_basecode icd9
+from nightherondata.pcornet_diag
+where c_basecode like 'KUH|DX_ID%'
+and  pcornet_diag.c_fullname like '\PCORI\DIAGNOSIS\09%' ;
+--select * from icd9_map;
+
+
+drop table icd_map purge;
+create table icd_map
+as
+select c_basecode dx_id,pcori_basecode icd10
+from nightherondata.pcornet_diag
+where c_basecode like 'KUH|DX_ID%'
+and  pcornet_diag.c_fullname like '\PCORI\DIAGNOSIS\10%' ;
+--select * from icd_map;
+--
+--drop table obs_fact purge;
+--create table obs_fact
+--nologging
+--parallel
+--as
+--select ENCOUNTER_NUM ,
+--PATIENT_NUM ,
+----CONCEPT_CD ,
+--COALESCE(icd_map.icd10,CONCEPT_CD) concept_cd,
+--PROVIDER_ID ,
+--START_DATE ,
+--MODIFIER_CD ,
+--INSTANCE_NUM ,
+--VALTYPE_CD ,
+--TVAL_CHAR ,
+--NVAL_NUM ,
+--VALUEFLAG_CD ,
+--QUANTITY_NUM ,
+--UNITS_CD ,
+--END_DATE ,
+--LOCATION_CD ,
+--OBSERVATION_BLOB ,
+--CONFIDENCE_NUM ,
+--UPDATE_DATE ,
+--DOWNLOAD_DATE ,
+--IMPORT_DATE ,
+--SOURCESYSTEM_CD ,
+--UPLOAD_ID ,
+--SUB_ENCOUNTER  
+--from nightherondata.observation_fact fact
+--left join icd_map
+--on fact.concept_cd = icd_map.icd10
+----where fact.concept_cd like 'ICD%'
+--;
+--select * from obs_fact;
+--select * from nightherondata.observation_fact
+--where patient_num =26387
+--;
+--in (select patient_num from covid_cohort);
 
 --------------------------------------------------------------------------------
 -- Create Diagnosis table.
@@ -790,6 +1114,7 @@ insert into covid_labs
 -- * Note that just the left 3 characters of the ICD codes should be used.
 -- * Customize this query if your ICD codes do not have a prefix.
 --------------------------------------------------------------------------------
+-- drop table covid_diagnoses purge;
 create table covid_diagnoses (
 	siteid varchar(50) not null,
 	icd_code_3chars varchar(10) not null,
@@ -801,39 +1126,48 @@ create table covid_diagnoses (
     constraint covid_diagnoses_pk primary key (icd_code_3chars, icd_version)
 );
 insert into covid_diagnoses
-	select '' siteid, icd_code_3chars, icd_version,
+	select 'KUMC' siteid, icd_code_3chars, icd_version,
 		sum(before_admission), 
 		sum(since_admission), 
 		sum(severe*before_admission), 
 		sum(severe*since_admission)
 	from (
 		-- ICD9
-		select distinct p.patient_num, p.severe, 9 icd_version,
-			substr(substr(f.concept_cd, length(code_prefix_icd9cm)+1, 999), 1, 3) icd_code_3chars,
+		select distinct 
+            --icd9_map.ICD9 , f.concept_cd,
+            p.patient_num, p.severe, 9 icd_version,
+			substr(substr('ICD9:'||icd9_map.icd9, length(code_prefix_icd9cm)+1, 999), 1, 3) icd_code_3chars,
 			(case when f.start_date <= (trunc(p.admission_date)-15) then 1 else 0 end) before_admission,
 			(case when f.start_date >= p.admission_date then 1 else 0 end) since_admission
 		from covid_config x
-			cross join observation_fact f
+			cross join nightherondata.observation_fact f
 			inner join covid_cohort p 
 				on f.patient_num=p.patient_num 
 					and f.start_date >= (trunc(p.admission_date)-365)
-		where concept_cd like code_prefix_icd9cm||'%' and code_prefix_icd9cm <> ''
-		-- ICD10
-		union all
-		select distinct p.patient_num, p.severe, 10 icd_version,
-			substr(substr(f.concept_cd, length(code_prefix_icd10cm)+1, 999), 1, 3) icd_code_3chars,
+            inner join icd9_map
+                on icd9_map.dx_id = f.concept_cd 
+		where concept_cd like 'KUH|DX_ID'||'%' and icd9_map.icd9 is not null
+--		-- ICD10
+	union all
+		select distinct 
+           -- icd_map.ICD10 , f.concept_cd,
+            p.patient_num, p.severe, 10 icd_version,
+			substr(substr('ICD10:'||icd_map.icd10, length(code_prefix_icd10cm)+1, 999), 1, 3) icd_code_3chars,
 			(case when f.start_date <= (trunc(p.admission_date)-15) then 1 else 0 end) before_admission,
 			(case when f.start_date >= p.admission_date then 1 else 0 end) since_admission
 		from covid_config x
-			cross join observation_fact f
+			cross join nightherondata.observation_fact f
 			inner join covid_cohort p 
 				on f.patient_num=p.patient_num 
 					and f.start_date >= (trunc(p.admission_date)-365)
-		where concept_cd like code_prefix_icd10cm||'%' and code_prefix_icd10cm <> ''
+            inner join icd_map
+                 on icd_map.dx_id = f.concept_cd
+		where concept_cd like 'KUH|DX_ID'||'%' and icd_map.icd10 is not null
+        --8446
 	) t
 	group by icd_code_3chars, icd_version;
 commit;    
-
+-- 528 --954 --530
 --------------------------------------------------------------------------------
 -- Create Medications table.
 --------------------------------------------------------------------------------
@@ -847,7 +1181,7 @@ create table covid_medications (
     constraint covid_medications primary key (med_class)
 );
 insert into covid_medications
-	select '' siteid, med_class,
+	select 'KUMC' siteid, med_class,
 		sum(before_admission), 
 		sum(since_admission), 
 		sum(severe*before_admission), 
@@ -856,7 +1190,7 @@ insert into covid_medications
 		select distinct p.patient_num, p.severe, m.med_class,	
 			(case when f.start_date <= (trunc(p.admission_date)-15) then 1 else 0 end) before_admission,
 			(case when f.start_date >= p.admission_date then 1 else 0 end) since_admission
-		from observation_fact f
+		from nightherondata.observation_fact f
 			inner join covid_cohort p 
 				on f.patient_num=p.patient_num 
 					and f.start_date >= (trunc(p.admission_date)-365)
@@ -877,45 +1211,45 @@ commit;
 -- Blur counts by adding a small random number.
 --------------------------------------------------------------------------------
 
-declare 
-        v_obfuscation_blur numeric(8,0);
-begin
-    select obfuscation_blur into v_obfuscation_blur from covid_config;
-	if v_obfuscation_blur > 0 THEN
-        
-        update covid_daily_counts
-            set cumulative_patients_all = cumulative_patients_all + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                cumulative_patients_severe = cumulative_patients_severe + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                cumulative_patients_dead = cumulative_patients_dead + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_pat_in_hosp_on_date = num_pat_in_hosp_on_date + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_pat_in_hospsevere_on_date = num_pat_in_hospsevere_on_date + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur         
-        ;commit;  
-        update covid_clinical_course
-            set num_pat_all_cur_in_hosp = num_pat_all_cur_in_hosp + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_pat_ever_severe_cur_hosp = num_pat_ever_severe_cur_hosp + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
-        ;commit;
-        update covid_demographics
-            set num_patients_all = num_patients_all + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_patients_ever_severe = num_patients_ever_severe + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
-        ;commit;
-        update covid_labs
-            set num_patients_all = num_patients_all + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_patients_ever_severe = num_patients_ever_severe + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
-        ;commit;
-        update covid_diagnoses
-            set num_pat_all_before_admission = num_pat_all_before_admission + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_pat_all_since_admission = num_pat_all_since_admission + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_pat_ever_severe_before_adm = num_pat_ever_severe_before_adm + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_pat_ever_severe_since_adm = num_pat_ever_severe_since_adm + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
-        ;commit;        
-        update covid_medications
-            set num_pat_all_before_admission = num_pat_all_before_admission + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_pat_all_since_admission = num_pat_all_since_admission + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_pat_ever_severe_before_adm = num_pat_ever_severe_before_adm + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
-                num_pat_ever_severe_since_adm = num_pat_ever_severe_since_adm + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
-        ;commit;        
-    end if;        
-end;
+--declare 
+--        v_obfuscation_blur numeric(8,0);
+--begin
+--    select obfuscation_blur into v_obfuscation_blur from covid_config;
+--	if v_obfuscation_blur > 0 THEN
+--        
+--        update covid_daily_counts
+--            set cumulative_patients_all = cumulative_patients_all + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                cumulative_patients_severe = cumulative_patients_severe + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                cumulative_patients_dead = cumulative_patients_dead + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_pat_in_hosp_on_date = num_pat_in_hosp_on_date + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_pat_in_hospsevere_on_date = num_pat_in_hospsevere_on_date + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur         
+--        ;commit;  
+--        update covid_clinical_course
+--            set num_pat_all_cur_in_hosp = num_pat_all_cur_in_hosp + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_pat_ever_severe_cur_hosp = num_pat_ever_severe_cur_hosp + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
+--        ;commit;
+--        update covid_demographics
+--            set num_patients_all = num_patients_all + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_patients_ever_severe = num_patients_ever_severe + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
+--        ;commit;
+--        update covid_labs
+--            set num_patients_all = num_patients_all + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_patients_ever_severe = num_patients_ever_severe + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
+--        ;commit;
+--        update covid_diagnoses
+--            set num_pat_all_before_admission = num_pat_all_before_admission + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_pat_all_since_admission = num_pat_all_since_admission + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_pat_ever_severe_before_adm = num_pat_ever_severe_before_adm + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_pat_ever_severe_since_adm = num_pat_ever_severe_since_adm + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
+--        ;commit;        
+--        update covid_medications
+--            set num_pat_all_before_admission = num_pat_all_before_admission + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_pat_all_since_admission = num_pat_all_since_admission + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_pat_ever_severe_before_adm = num_pat_ever_severe_before_adm + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur,
+--                num_pat_ever_severe_since_adm = num_pat_ever_severe_since_adm + FLOOR(ABS(OWA_OPT_LOCK.CHECKSUM(sys_guid())/2147483648.0)*(v_obfuscation_blur*2+1)) - v_obfuscation_blur
+--        ;commit;        
+--    end if;        
+--end;
 
 --------------------------------------------------------------------------------
 -- Mask small counts with "-99".
@@ -985,19 +1319,19 @@ end;
 --------------------------------------------------------------------------------
 -- Delete small counts.
 --------------------------------------------------------------------------------
-declare 
-    v_obfuscation_sml_cnt_delete numeric(8,0); --v_obfuscation_small_count_delete: shortened to under 128 bytes
-begin
-    select obfuscation_small_count_delete into v_obfuscation_sml_cnt_delete from covid_config;
-    if v_obfuscation_sml_cnt_delete > 0 THEN
-        select obfuscation_small_count_mask into v_obfuscation_sml_cnt_delete from covid_config;
-        delete from covid_daily_counts where cumulative_patients_all<v_obfuscation_sml_cnt_delete;commit;
-        delete from covid_clinical_course where num_pat_all_cur_in_hosp<v_obfuscation_sml_cnt_delete;commit;
-        delete from covid_labs where num_patients_all<v_obfuscation_sml_cnt_delete;commit;
-        delete from covid_diagnoses where num_pat_all_before_admission<v_obfuscation_sml_cnt_delete and num_pat_all_since_admission<v_obfuscation_sml_cnt_delete;commit;
-        delete from covid_medications where num_pat_all_before_admission<v_obfuscation_sml_cnt_delete and num_pat_all_since_admission<v_obfuscation_sml_cnt_delete;commit;
-    end if;
-end;
+--declare 
+--    v_obfuscation_sml_cnt_delete numeric(8,0); --v_obfuscation_small_count_delete: shortened to under 128 bytes
+--begin
+--    select obfuscation_small_count_delete into v_obfuscation_sml_cnt_delete from covid_config;
+--    if v_obfuscation_sml_cnt_delete > 0 THEN
+--        select obfuscation_small_count_mask into v_obfuscation_sml_cnt_delete from covid_config;
+--        delete from covid_daily_counts where cumulative_patients_all<v_obfuscation_sml_cnt_delete;commit;
+--        delete from covid_clinical_course where num_pat_all_cur_in_hosp<v_obfuscation_sml_cnt_delete;commit;
+--        delete from covid_labs where num_patients_all<v_obfuscation_sml_cnt_delete;commit;
+--        delete from covid_diagnoses where num_pat_all_before_admission<v_obfuscation_sml_cnt_delete and num_pat_all_since_admission<v_obfuscation_sml_cnt_delete;commit;
+--        delete from covid_medications where num_pat_all_before_admission<v_obfuscation_sml_cnt_delete and num_pat_all_since_admission<v_obfuscation_sml_cnt_delete;commit;
+--    end if;
+--end;
 
 --******************************************************************************
 --******************************************************************************
@@ -1173,3 +1507,5 @@ end*/
   commit 64d83bd69c1a4d856c5150c08516d288afce1fb5
 Adapted to Oracle by Robert Bradford (UNC-CH) [rbrad@med.unc.edu]
 */
+
+
