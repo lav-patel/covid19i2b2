@@ -1,4 +1,5 @@
 set echo on;
+ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD';
 
 --Cleanup scripts if necessary
 
@@ -421,7 +422,10 @@ commit;
 --select * from COVID_MED_PATHS
 --join nightherondata.concept_dimension cd
 --cd.;
-create table COVID_MED_PATHS AS
+create table COVID_MED_PATHS 
+nologging
+parallel
+AS
 select concept_path, concept_cd
 	from nightherondata.concept_dimension
 	where concept_path like '\ACT\Medications\MedicationsByVaClass\V2_09302018\%' -- '\ACT\Medications\MedicationsByAlpha\V2_12112018\RxNormUMLSRxNav\%' --
@@ -1379,7 +1383,7 @@ end;
 -- * Copy and paste to a text file, save it FileName.csv.
 -- * Make sure it is not saved as FileName.csv.txt.
 --------------------------------------------------------------------------------
-/*
+
 begin
     if exists (select * from covid_config where output_as_csv = 1) then*/
         -- DailyCounts
@@ -1499,8 +1503,9 @@ begin
                 union all select 9999999, ''from dual --Add a blank row to make sure the last line in the file with data ends with a line feed.
             ) t
             order by i;
-/*    end if;
-end*/
+    end if;
+end
+*/
 
 /* Oracle scripts based on:
   https://github.com/GriffinWeber/covid19i2b2/blob/master/4CE_Phase1.1_Files_mssql.sql
