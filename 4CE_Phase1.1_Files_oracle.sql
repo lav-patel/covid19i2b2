@@ -1,5 +1,4 @@
 set echo on;
-ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD';
 
 --Cleanup scripts if necessary
 
@@ -541,7 +540,8 @@ insert into covid_admissions
             on v.patient_num=p.patient_num
             and v.start_date >= (trunc(p.covid_pos_date)-7)
 ;            
---159 
+--159
+--228
 commit;
 
 --------------------------------------------------------------------------------
@@ -1357,7 +1357,7 @@ update covid_demographics set siteid = (select siteid from covid_config);commit;
 update covid_labs set siteid = (select siteid from covid_config);commit;
 update covid_diagnoses set siteid = (select siteid from covid_config);commit;
 update covid_medications set siteid = (select siteid from covid_config);commit;
-
+ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD';
 --------------------------------------------------------------------------------
 -- OPTION #1: View the data as tables.
 -- * Make sure everything looks reasonable.
@@ -1371,8 +1371,11 @@ begin
     select output_as_columns into v_output_as_columns from covid_config;
     if v_output_as_columns > 0 then*/
         select * from covid_daily_counts order by calendar_date;
+        -- 192
         select * from covid_clinical_course order by days_since_admission;
+        -- 190
         select * from covid_demographics order by sex, age_group, race;
+        -- 192
         select * from covid_labs order by loinc, days_since_admission;
         select * from covid_diagnoses order by num_pat_all_since_admission desc, num_pat_all_before_admission desc;
         select * from covid_medications order by num_pat_all_since_admission desc, num_pat_all_before_admission desc;
