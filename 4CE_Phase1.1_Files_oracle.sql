@@ -315,6 +315,15 @@ insert into COVID_LAB_MAP
 	) t;
 commit;
 
+/*
+select concept_cd,units_cd,count(*) cnt
+from nightherondata.observation_fact
+where concept_cd in 
+(select local_lab_code from covid_lab_map)
+group by concept_cd,units_cd
+order by concept_cd,cnt DESC, units_cd;
+
+*/
 -- Use the concept_dimension to get an expanded list of local lab codes (optional).
 -- Uncomment the query below to run this as part of the script.
 -- This will pull in additional labs based on your existing mappings.
@@ -1021,7 +1030,7 @@ insert into covid_labs
 				inner join covid_cohort p 
 					on f.patient_num=p.patient_num
 				inner join covid_lab_map l
-					on f.concept_cd=l.local_lab_code
+					on f.concept_cd=l.local_lab_code and lower(trim(f.units_cd)) = lower(trim(l.lab_units))
 			where l.local_lab_code is not null
 				and f.nval_num is not null
 				and f.nval_num >= 0
