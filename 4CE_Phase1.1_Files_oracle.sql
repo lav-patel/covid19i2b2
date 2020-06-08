@@ -534,7 +534,14 @@ create table covid_admissions (
 );
 
 insert into covid_admissions
-    select distinct v.patient_num, cast(start_date as date), cast(coalesce(end_date,current_date) as date)
+    select distinct
+    v.patient_num
+    , cast(start_date as date)
+    , CASE
+        WHEN end_date < start_date
+        THEN start_date
+        ELSE cast(coalesce(end_date,current_date) as date)
+      END  discharge_date
     from (select patient_num, start_date, end_date from nightherondata.observation_fact where concept_cd = 'KUH|HOSP_ADT_CLASS:101') v
         inner join covid_pos_patients p
             on v.patient_num=p.patient_num
