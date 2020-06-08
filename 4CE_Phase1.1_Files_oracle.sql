@@ -1373,7 +1373,7 @@ update covid_demographics set siteid = (select siteid from covid_config);commit;
 update covid_labs set siteid = (select siteid from covid_config);commit;
 update covid_diagnoses set siteid = (select siteid from covid_config);commit;
 update covid_medications set siteid = (select siteid from covid_config);commit;
-ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD';
+--ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD';
 --------------------------------------------------------------------------------
 -- OPTION #1: View the data as tables.
 -- * Make sure everything looks reasonable.
