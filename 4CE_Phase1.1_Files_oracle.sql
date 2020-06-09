@@ -931,7 +931,7 @@ insert into covid_clinical_course
 		count(*),
 		sum(severe)
 	from (
-		select distinct trunc(c.admission_date)-trunc(d.d) days_since_admission, 
+		select distinct trunc(d.d)-trunc(c.admission_date) days_since_admission, 
 			c.patient_num, severe
 		from covid_date_list_temp d
 			inner join covid_admissions p
@@ -1024,7 +1024,7 @@ insert into covid_labs
 			avg(ln(val+0.5)) logval -- natural log (ln), not log base 10
 		from (
 			select l.loinc, l.lab_units, f.patient_num, p.severe,
-				trunc(p.admission_date) - trunc(f.start_date) days_since_admission,
+				 trunc(f.start_date) - trunc(p.admission_date)  days_since_admission,
 				f.nval_num*l.scale_factor val
 			from nightherondata.observation_fact f
 				inner join covid_cohort p 
