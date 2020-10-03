@@ -231,6 +231,58 @@ order by cd.concept_path
 --from f_unit
 --group by concept_cd , units_cd
 --order by concept_cd , count(*) DESC;
+drop table covid_lab_scale_factor;
+create table covid_lab_scale_factor
+as
+with cp as 
+    (
+    select concept_path
+    from  NightHeronData.concept_dimension
+    where concept_cd in (
+     'LOINC:1988-5' --KUH|COMPONENT_ID:3186
+    ,'LOINC:48065-7'
+    ,'LOINC:48066-5'--KUH|COMPONENT_ID:3094
+    ,'LOINC:731-0' --KUH|COMPONENT_ID:3016
+    )
+    )
+, kuh_concept as
+    (
+    select 
+    *
+    from NightHeronData.concept_dimension cd
+    join cp
+        on cd.concept_path like  cp.concept_path|| '%'
+    order by cd.concept_path
+    )
+,f_unit as
+    (
+    select  f.concept_cd , f.units_cd,  f.nval_num
+    from nightherondata.observation_fact f
+    where
+    f.concept_cd in ( select concept_cd from kuh_concept where  concept_cd like 'KUH|COMPONENT_ID:%')
+    )
+, lab_concept_stats as
+    (
+    select concept_cd , units_cd , count(*) cnt, avg(nval_num) average1 ,MEDIAN(nval_num) median1, stddev(nval_num)
+    from f_unit h
+    group by concept_cd , units_cd
+    order by concept_cd , count(*) DESC
+    )
+select
+m.loinc
+,s.concept_cd
+,s.units_cd
+,m.scale_factor
+,m.lab_units target_unit
+,s.cnt
+,s.median1
+,s.average1
+from lab_concept_stats s
+join COVID_LAB_MAP m
+    on s.concept_cd = m.local_lab_code
+order by s.concept_cd,s.cnt DESC
+;
+select * from COVID_LAB_MAP;
 
 
 
