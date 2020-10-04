@@ -411,6 +411,7 @@ order by s.concept_cd,s.cnt DESC
 --------------------------------------------------------------------------------------
 drop table obs_fact_labs_converted purge;
 create table obs_fact_labs_converted
+parallel
 nologging
 TABLESPACE "COVID"
 as
