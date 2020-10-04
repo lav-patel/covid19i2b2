@@ -233,6 +233,7 @@ order by cd.concept_path
 --order by concept_cd , count(*) DESC;
 drop table covid_lab_scale_factor;
 create table covid_lab_scale_factor
+nologging
 as
 with cp as 
     (
@@ -282,9 +283,78 @@ join COVID_LAB_MAP m
     on s.concept_cd = m.local_lab_code
 order by s.concept_cd,s.cnt DESC
 ;
-select * from COVID_LAB_MAP;
-
-
+--create table covid_lab_scale_factor_manual
+--as
+--select * from covid_lab_scale_factor;
+--ALTER TABLE lpatel.covid_lab_scale_factor_manual MODIFY scale_factor NUMBER;
+--ALTER TABLE lpatel.covid_lab_scale_factor_manual ADD id NUMBER(*,0);
+-- will use id 1 to 18.
+drop table obs_fact_labs_converted purge;
+create table obs_fact_labs_converted
+nologging
+TABLESPACE "COVID"
+as
+select 
+f.ENCOUNTER_NUM ,
+f.PATIENT_NUM ,
+f.CONCEPT_CD ,
+f.PROVIDER_ID ,
+f.START_DATE ,
+f.MODIFIER_CD ,
+f.INSTANCE_NUM ,
+f.VALTYPE_CD ,
+f.TVAL_CHAR ,
+--f.NVAL_NUM old_NVAL_NUM,
+f.nval_num * COALESCE(m.scale_factor,1) nval_num,
+f.VALUEFLAG_CD ,
+f.QUANTITY_NUM ,
+--f.UNITS_CD OLD_UNITS_CD,
+m.target_unit units_cd,
+f.END_DATE ,
+f.LOCATION_CD ,
+--f.OBSERVATION_BLOB ,
+f.CONFIDENCE_NUM ,
+f.UPDATE_DATE ,
+f.DOWNLOAD_DATE ,
+f.IMPORT_DATE ,
+f.SOURCESYSTEM_CD ,
+f.UPLOAD_ID ,
+f.SUB_ENCOUNTER 
+from nightherondata.observation_fact f 
+join covid_lab_scale_factor_manual m
+    on f.concept_cd= m.concept_cd
+    and f.units_cd = m.units_cd
+where f.concept_cd in (select distinct concept_cd from  covid_lab_scale_factor_manual)
+union 
+select 
+f.ENCOUNTER_NUM ,
+f.PATIENT_NUM ,
+f.CONCEPT_CD ,
+f.PROVIDER_ID ,
+f.START_DATE ,
+f.MODIFIER_CD ,
+f.INSTANCE_NUM ,
+f.VALTYPE_CD ,
+f.TVAL_CHAR ,
+f.NVAL_NUM,
+--f.nval_num * COALESCE(m.scale_factor,1) nval_num,
+f.VALUEFLAG_CD ,
+f.QUANTITY_NUM ,
+f.UNITS_CD ,
+--m.target_unit units_cd,
+f.END_DATE ,
+f.LOCATION_CD ,
+--f.OBSERVATION_BLOB ,
+f.CONFIDENCE_NUM ,
+f.UPDATE_DATE ,
+f.DOWNLOAD_DATE ,
+f.IMPORT_DATE ,
+f.SOURCESYSTEM_CD ,
+f.UPLOAD_ID ,
+f.SUB_ENCOUNTER 
+from nightherondata.observation_fact f
+where f.concept_cd like 'KUH|COMPONENT_ID:%'
+;
 
 --------------------------------------------------------------------------------
 create table COVID_LAB_MAP (
