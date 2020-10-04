@@ -289,6 +289,9 @@ order by s.concept_cd,s.cnt DESC
 --ALTER TABLE lpatel.covid_lab_scale_factor_manual MODIFY scale_factor NUMBER;
 --ALTER TABLE lpatel.covid_lab_scale_factor_manual ADD id NUMBER(*,0);
 -- will use id 1 to 18.
+--------------------------------------------------------------------------------------
+-- Create new observation fact which convert labs value to 4CE standards
+--------------------------------------------------------------------------------------
 drop table obs_fact_labs_converted purge;
 create table obs_fact_labs_converted
 nologging
@@ -1148,7 +1151,8 @@ insert into covid_labs
 			select l.loinc, l.lab_units, f.patient_num, p.severe,
 				 trunc(f.start_date) - trunc(p.admission_date)  days_since_admission,
 				f.nval_num*l.scale_factor val
-			from nightherondata.observation_fact f
+			--from nightherondata.observation_fact f
+            from obs_fact_labs_converted f
 				inner join covid_cohort p 
 					on f.patient_num=p.patient_num
 				inner join covid_lab_map l
@@ -1163,8 +1167,9 @@ insert into covid_labs
 	) t
 	group by loinc, days_since_admission, lab_units
 ;
---542
-commit;    
+-- old: 441 rows inserted.
+-- new: 1,056 rows inserted.
+commit; 
 
 --------------------------------------------------------------------------------
 -- ICD mapping
