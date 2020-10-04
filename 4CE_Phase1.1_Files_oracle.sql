@@ -45,6 +45,7 @@ create table covid_config (
 	output_as_csv number(1) -- Return the data in tables with a single column containing comma separated values
 );
 insert into COVID_CONFIG
+    (
 	select 'KUMC', -- siteid
 		1, -- include_race
 		1, -- race_in_fact_table
@@ -60,7 +61,8 @@ insert into COVID_CONFIG
 		0, -- obfuscation_demographics
 		0, -- output_as_columns
 		1 -- output_as_csv
-    from dual;    
+    from dual
+    );    
 commit;
 -- TODO:??
 -- ! If your ICD codes do not start with a prefix (e.g., "ICD:"), then you will
@@ -1261,6 +1263,18 @@ and  pcornet_diag.c_fullname like '\PCORI\DIAGNOSIS\10%' ;
 -- * Select all ICD9 and ICD10 codes.
 -- * Note that just the left 3 characters of the ICD codes should be used.
 -- * Customize this query if your ICD codes do not have a prefix.
+/*
+select ICD_version, count(*)
+from covid_diagnoses_icd10
+group by ICD_version;
+-- 10	362
+-----------------------------
+select ICD_version, count(*)
+from covid_diagnoses_icd9_10
+group by ICD_version;
+--9	216
+--10	379
+*/
 --------------------------------------------------------------------------------
 -- drop table covid_diagnoses purge;
 create table covid_diagnoses (
@@ -1318,6 +1332,7 @@ insert into covid_diagnoses
 	group by icd_code_3chars, icd_version;
 commit;    
 -- 528 --954 --530
+-- ICD10 only : 362 rows inserted.
 --------------------------------------------------------------------------------
 -- Create Medications table.
 --------------------------------------------------------------------------------
