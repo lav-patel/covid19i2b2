@@ -862,6 +862,7 @@ eye ball server date vs death date
 --        commit;
 --    end if;            
 --end;
+--/
 
 
 --******************************************************************************
@@ -1430,6 +1431,7 @@ commit;
 --        ;commit;        
 --    end if;        
 --end;
+--/
 
 --------------------------------------------------------------------------------
 -- Mask small counts with "-99".
@@ -1477,7 +1479,7 @@ begin
         ;commit;
         END IF;        
 end;
-
+/
 --------------------------------------------------------------------------------
 -- To protect obfuscated demographics breakdowns, keep individual sex, age,
 --   and race breakdowns, set combinations and the total count to -999.
@@ -1495,6 +1497,7 @@ begin
         ;commit;        
     END IF;            
 end;
+/
 
 --------------------------------------------------------------------------------
 -- Delete small counts.
@@ -1512,7 +1515,7 @@ end;
 --        delete from covid_medications where num_pat_all_before_admission<v_obfuscation_sml_cnt_delete and num_pat_all_since_admission<v_obfuscation_sml_cnt_delete;commit;
 --    end if;
 --end;
-
+--/
 --******************************************************************************
 --******************************************************************************
 --*** Finish up
