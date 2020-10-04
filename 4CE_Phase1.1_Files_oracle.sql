@@ -45,7 +45,6 @@ create table covid_config (
 	output_as_csv number(1) -- Return the data in tables with a single column containing comma separated values
 );
 insert into COVID_CONFIG
-    (
 	select 'KUMC', -- siteid
 		1, -- include_race
 		1, -- race_in_fact_table
@@ -53,7 +52,7 @@ insert into COVID_CONFIG
 		1, -- death_data_accurate
 		'ICD9:', -- code_prefix_icd9cm   -- TOOD: Ask them what if we are using local code example dx_id
 		'ICD10:', -- code_prefix_icd10cm --select concept_cd from  Nightherondata.concept_dimension   where concept_path like '\i2b2\Diagnoses\ICD10\A20098492\A20160670\A18924177\%'
-		'ICD9:', -- code_prefix_icd9proc -- select concept_cd from  Nightherondata.CONCEPT_DIMENSION   where concept_path LIKE '\PCORI\PROCEDURE\09\(08-16.99) Ope~jf1y\(15) Operation~pru9\%';
+		'ICD9:', -- code_prefix_icd9proc -- select concept_cd from  Nightherondata.CONCEPT_DIMENSION   where concept_path LIKE '\PCORI\PROCEDURE\09\(08-16.99) Ope~jf1y\(15) Operation~pru9\%'
 		'ICD10:', -- code_prefix_icd10pcs --select concept_cd from  Nightherondata.CONCEPT_DIMENSION   where concept_path LIKE '\PCORI\PROCEDURE\10\(4) Measuremen~ge9w\(4A) Measureme~dxgz\(4A1) Measurem~49bf\(4A13) Measure~djxw\%';
 		0, -- obfuscation_blur
 		11, -- obfuscation_small_count_mask
@@ -61,8 +60,7 @@ insert into COVID_CONFIG
 		0, -- obfuscation_demographics
 		0, -- output_as_columns
 		1 -- output_as_csv
-    from dual
-    );    
+    from dual;    
 commit;
 -- TODO:??
 -- ! If your ICD codes do not start with a prefix (e.g., "ICD:"), then you will
