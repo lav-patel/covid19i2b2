@@ -22,6 +22,8 @@ WHENEVER SQLERROR CONTINUE;
   drop table covid_labs;
   drop table covid_medications;
   drop table covid_diagnoses;
+  --LP
+  drop table covid_lab_scale_factor;
 WHENEVER SQLERROR EXIT SQL.SQLCODE;
 
 --------------------------------------------------------------------------------
@@ -346,7 +348,7 @@ insert into COVID_LAB_MAP2
 	);
 commit;    
 */
-drop table covid_lab_scale_factor;
+
 create table covid_lab_scale_factor
 nologging
 as
