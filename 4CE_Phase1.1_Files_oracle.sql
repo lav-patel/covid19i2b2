@@ -231,6 +231,121 @@ order by cd.concept_path
 --from f_unit
 --group by concept_cd , units_cd
 --order by concept_cd , count(*) DESC;
+
+--------------------------------------------------------------------------------
+create table COVID_LAB_MAP (
+	loinc varchar(20) not null, 
+	local_lab_code varchar(50) not null, 
+	scale_factor numeric(4), 
+	lab_units varchar(20), 
+	lab_name varchar(100),
+    constraint COVID_LABMAP_PK PRIMARY KEY (loinc, local_lab_code)
+);
+
+insert into COVID_LAB_MAP
+	select loinc, 'KUH|COMPONENT_ID:'||local_lab_code,  -- Change "LOINC:" to your local LOINC code prefix (scheme)
+		scale_factor, lab_units, lab_name
+	from (
+		select '6690-2' loinc, '3009' local_lab_code, 1 scale_factor, '10*3/uL' lab_units, 'white blood cell count (Leukocytes)' lab_name from dual   
+            union 
+        select '751-8','3012',1,'10*3/uL','neutrophil count' from dual
+            union 
+        select '731-0','3016',1,'10*3/uL','lymphocyte count' from dual
+            union 
+--        select '1751-7','1',1,'g/dL','albumin' from dual
+--            union 
+        select '1751-7','2023',1,'g/dL','albumin' from dual
+            union 
+--        select '1751-7','51066',1,'g/dL','albumin' from dual
+--            union 
+        select '2532-0','2070',1,'U/L','lactate dehydrogenase (LDH)' from dual
+            union 
+        select '1742-6','2065',1,'U/L','alanine aminotransferase (ALT)' from dual
+            union 
+--        select '1742-6','51082',1,'U/L','alanine aminotransferase (ALT)' from dual
+--            union 
+        select '1920-8','2064',1,'U/L','aspartate aminotransferase (AST)' from dual
+            union 
+--        select '1920-8','51154',1,'U/L','aspartate aminotransferase (AST)' from dual
+--            union 
+        select '1975-2','2024',1,'mg/dL','total bilirubin' from dual
+            union 
+--        select '1975-2','52182',1,'mg/dL','total bilirubin' from dual
+--            union 
+        select '2160-0','2009',1,'mg/dL','creatinine' from dual
+            union 
+--        select '2160-0','51418',1,'mg/dL','creatinine' from dual
+--            union 
+        select '49563-0','2326',1,'ng/mL','cardiac troponin (High Sensitivity)' from dual
+            union 
+        select '49563-0','2327',1,'ng/mL','cardiac troponin (High Sensitivity)' from dual
+            union 
+        select '6598-7','2328',1,'ug/L','cardiac troponin (Normal Sensitivity)' from dual
+            union 
+--        select '48065-7','48065-7',1,'ng/mL{FEU}','D-dimer (FEU)' from dual
+--            union  -- dont have child of loinc ( 0 records) in HEORN
+        select '48066-5','3094',1,'ng/mL{DDU}','D-dimer (DDU)' from dual
+            union 
+--        select '5902-2','52032',1,'s','prothrombin time (PT)' from dual
+--            union 
+        select '33959-8','664',1,'ng/mL','procalcitonin' from dual
+            union 
+        select '1988-5','3186',1,'mg/L','C-reactive protein (CRP) (Normal Sensitivity)' from dual
+            union 
+        select '3255-7','3093',1,'mg/dL','Fibrinogen' from dual
+            union 
+        select '2276-4','3176',1,'ng/mL','Ferritin' from dual
+            union 
+--        select '2019-8','3761',1,'mmHg','PaCO2' from dual
+--            union 
+        select '2019-8','4003',1,'mmHg','PaCO2' from dual
+            union    
+        select '2019-8','4004',1,'mmHg','PaCO2' from dual
+            union
+--        select '2019-8','51936',1,'mmHg','PaCO2' from dual
+--            union
+        select '2703-7','4005',1,'mmHg','PaO2' from dual
+            union
+        select '2703-7','4006',1,'mmHg','PaO2' from dual
+--            union
+--        select '2703-7','51988',1,'mmHg','PaO2' from dual
+-- TODO: all labs are mapped but unit conversion is remaning.
+	) t;
+commit;
+
+/*
+select concept_cd,units_cd,count(*) cnt
+from nightherondata.observation_fact
+where concept_cd in 
+(select local_lab_code from covid_lab_map)
+group by concept_cd,units_cd
+order by concept_cd,cnt DESC, units_cd;
+
+*/
+-- Use the concept_dimension to get an expanded list of local lab codes (optional).
+-- Uncomment the query below to run this as part of the script.
+-- This will pull in additional labs based on your existing mappings.
+-- It will find paths corresponding to concepts already in the covid_lab_map table,
+--   and then find all the concepts corresponding to child paths.
+-- NOTE: Make sure to adjust the scale_factor if any of these additional
+--   lab codes use different units than their parent code.
+-- WARNING: This query might take several minutes to run.
+/*
+create table COVID_LAB_MAP2 as select * from COVID_LAB_MAP where 1=0;
+insert into COVID_LAB_MAP2
+	select distinct l.loinc, d.concept_cd, l.scale_factor, l.lab_units, l.lab_name
+	from COVID_LAB_MAP l
+		inner join nightherondata.concept_dimension c
+			on l.local_lab_code = c.concept_cd
+		inner join nightherondata.concept_dimension d
+			on d.concept_path like c.concept_path ||'%'
+	where not exists (
+		select *
+		from COVID_LAB_MAP2 t
+		where t.loinc = l.loinc and t.local_lab_code = d.concept_cd
+	);
+commit;    
+*/
 drop table covid_lab_scale_factor;
 create table covid_lab_scale_factor
 nologging
@@ -358,122 +473,6 @@ f.SUB_ENCOUNTER
 from nightherondata.observation_fact f
 where f.concept_cd like 'KUH|COMPONENT_ID:%'
 ;
-
---------------------------------------------------------------------------------
-create table COVID_LAB_MAP (
-	loinc varchar(20) not null, 
-	local_lab_code varchar(50) not null, 
-	scale_factor numeric(4), 
-	lab_units varchar(20), 
-	lab_name varchar(100),
-    constraint COVID_LABMAP_PK PRIMARY KEY (loinc, local_lab_code)
-);
-
-insert into COVID_LAB_MAP
-	select loinc, 'KUH|COMPONENT_ID:'||local_lab_code,  -- Change "LOINC:" to your local LOINC code prefix (scheme)
-		scale_factor, lab_units, lab_name
-	from (
-		select '6690-2' loinc, '3009' local_lab_code, 1 scale_factor, '10*3/uL' lab_units, 'white blood cell count (Leukocytes)' lab_name from dual   
-            union 
-        select '751-8','3012',1,'10*3/uL','neutrophil count' from dual
-            union 
-        select '731-0','3016',1,'10*3/uL','lymphocyte count' from dual
-            union 
---        select '1751-7','1',1,'g/dL','albumin' from dual
---            union 
-        select '1751-7','2023',1,'g/dL','albumin' from dual
-            union 
---        select '1751-7','51066',1,'g/dL','albumin' from dual
---            union 
-        select '2532-0','2070',1,'U/L','lactate dehydrogenase (LDH)' from dual
-            union 
-        select '1742-6','2065',1,'U/L','alanine aminotransferase (ALT)' from dual
-            union 
---        select '1742-6','51082',1,'U/L','alanine aminotransferase (ALT)' from dual
---            union 
-        select '1920-8','2064',1,'U/L','aspartate aminotransferase (AST)' from dual
-            union 
---        select '1920-8','51154',1,'U/L','aspartate aminotransferase (AST)' from dual
---            union 
-        select '1975-2','2024',1,'mg/dL','total bilirubin' from dual
-            union 
---        select '1975-2','52182',1,'mg/dL','total bilirubin' from dual
---            union 
-        select '2160-0','2009',1,'mg/dL','creatinine' from dual
-            union 
---        select '2160-0','51418',1,'mg/dL','creatinine' from dual
---            union 
-        select '49563-0','2326',1,'ng/mL','cardiac troponin (High Sensitivity)' from dual
-            union 
-        select '49563-0','2327',1,'ng/mL','cardiac troponin (High Sensitivity)' from dual
-            union 
-        select '6598-7','2328',1,'ug/L','cardiac troponin (Normal Sensitivity)' from dual
-            union 
---        select '48065-7','48065-7',1,'ng/mL{FEU}','D-dimer (FEU)' from dual
---            union  -- dont have child of loinc ( 0 records) in HEORN
-        select '48066-5','3094',1,'ng/mL{DDU}','D-dimer (DDU)' from dual
-            union 
---        select '5902-2','52032',1,'s','prothrombin time (PT)' from dual
---            union 
-        select '33959-8','664',1,'ng/mL','procalcitonin' from dual
-            union 
-        select '1988-5','3186',1,'mg/L','C-reactive protein (CRP) (Normal Sensitivity)' from dual
-            union 
-        select '3255-7','3093',1,'mg/dL','Fibrinogen' from dual
-            union 
-        select '2276-4','3176',1,'ng/mL','Ferritin' from dual
-            union 
---        select '2019-8','3761',1,'mmHg','PaCO2' from dual
---            union 
-        select '2019-8','4003',1,'mmHg','PaCO2' from dual
-            union    
-        select '2019-8','4004',1,'mmHg','PaCO2' from dual
-            union
---        select '2019-8','51936',1,'mmHg','PaCO2' from dual
---            union
-        select '2703-7','4005',1,'mmHg','PaO2' from dual
-            union
-        select '2703-7','4006',1,'mmHg','PaO2' from dual
---            union
---        select '2703-7','51988',1,'mmHg','PaO2' from dual
--- TODO: all labs are mapped but unit conversion is remaning.
-	) t;
-commit;
-
-/*
-select concept_cd,units_cd,count(*) cnt
-from nightherondata.observation_fact
-where concept_cd in 
-(select local_lab_code from covid_lab_map)
-group by concept_cd,units_cd
-order by concept_cd,cnt DESC, units_cd;
-
-*/
--- Use the concept_dimension to get an expanded list of local lab codes (optional).
--- Uncomment the query below to run this as part of the script.
--- This will pull in additional labs based on your existing mappings.
--- It will find paths corresponding to concepts already in the covid_lab_map table,
---   and then find all the concepts corresponding to child paths.
--- NOTE: Make sure to adjust the scale_factor if any of these additional
---   lab codes use different units than their parent code.
--- WARNING: This query might take several minutes to run.
-/*
-create table COVID_LAB_MAP2 as select * from COVID_LAB_MAP where 1=0;
-insert into COVID_LAB_MAP2
-	select distinct l.loinc, d.concept_cd, l.scale_factor, l.lab_units, l.lab_name
-	from COVID_LAB_MAP l
-		inner join nightherondata.concept_dimension c
-			on l.local_lab_code = c.concept_cd
-		inner join nightherondata.concept_dimension d
-			on d.concept_path like c.concept_path ||'%'
-	where not exists (
-		select *
-		from COVID_LAB_MAP2 t
-		where t.loinc = l.loinc and t.local_lab_code = d.concept_cd
-	);
-commit;    
-*/
-
 --------------------------------------------------------------------------------
 -- Medication mappings
 -- * Do not change the med_class or add additional medications.
