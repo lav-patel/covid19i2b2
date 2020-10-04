@@ -1529,6 +1529,7 @@ end;
 -- * It must start with a letter.
 -- * It cannot have any blank spaces or special characters.
 --------------------------------------------------------------------------------
+;
 update covid_daily_counts set siteid = (select siteid from covid_config);commit;
 update covid_clinical_course set siteid = (select siteid from covid_config);commit;
 update covid_demographics set siteid = (select siteid from covid_config);commit;
