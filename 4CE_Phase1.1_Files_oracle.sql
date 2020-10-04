@@ -1280,6 +1280,7 @@ insert into covid_diagnoses
 		sum(severe*before_admission), 
 		sum(severe*since_admission)
 	from (
+/*
 		-- ICD9
 		select distinct 
             --icd9_map.ICD9 , f.concept_cd,
@@ -1295,8 +1296,9 @@ insert into covid_diagnoses
             inner join icd9_map
                 on icd9_map.dx_id = f.concept_cd 
 		where concept_cd like 'KUH|DX_ID'||'%' and icd9_map.icd9 is not null
+        union all
+*/        
 --		-- ICD10
-	union all
 		select distinct 
            -- icd_map.ICD10 , f.concept_cd,
             p.patient_num, p.severe, 10 icd_version,
