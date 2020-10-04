@@ -53,7 +53,7 @@ insert into COVID_CONFIG
 		'ICD9:', -- code_prefix_icd9cm   -- TOOD: Ask them what if we are using local code example dx_id
 		'ICD10:', -- code_prefix_icd10cm --select concept_cd from  Nightherondata.concept_dimension   where concept_path like '\i2b2\Diagnoses\ICD10\A20098492\A20160670\A18924177\%'
 		'ICD9:', -- code_prefix_icd9proc -- select concept_cd from  Nightherondata.CONCEPT_DIMENSION   where concept_path LIKE '\PCORI\PROCEDURE\09\(08-16.99) Ope~jf1y\(15) Operation~pru9\%'
-		'ICD10:', -- code_prefix_icd10pcs --select concept_cd from  Nightherondata.CONCEPT_DIMENSION   where concept_path LIKE '\PCORI\PROCEDURE\10\(4) Measuremen~ge9w\(4A) Measureme~dxgz\(4A1) Measurem~49bf\(4A13) Measure~djxw\%';
+		'ICD10:', -- code_prefix_icd10pcs --select concept_cd from  Nightherondata.CONCEPT_DIMENSION   where concept_path LIKE '\PCORI\PROCEDURE\10\(4) Measuremen~ge9w\(4A) Measureme~dxgz\(4A1) Measurem~49bf\(4A13) Measure~djxw\%'
 		0, -- obfuscation_blur
 		11, -- obfuscation_small_count_mask
 		0, -- obfuscation_small_count_delete
