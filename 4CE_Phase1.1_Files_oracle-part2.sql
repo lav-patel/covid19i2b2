@@ -243,11 +243,20 @@ insert into covid_admissions
     from (select patient_num, start_date, end_date from nightherondata.observation_fact where concept_cd = 'KUH|HOSP_ADT_CLASS:101') v
         inner join covid_pos_patients p
             on v.patient_num=p.patient_num
+            -- 4500
             and v.start_date >= (trunc(p.covid_pos_date)-7)
 ;            
 --159
 --228
+--1064
 commit;
+--select count(distinct (patient_num))  from nightherondata.observation_fact where concept_cd = 'KUH|HOSP_ADT_CLASS:101';
+--select count(distinct (patient_num)) from covid_admissions;
+----784
+--
+--select patient_num,birth_date, (sysdate-birth_date)/365 from nightherondata.patient_dimension
+--where patient_num in (select distinct (patient_num) from covid_admissions)
+--;
 
 --------------------------------------------------------------------------------
 -- Get the list of patients who will be the covid cohort.
