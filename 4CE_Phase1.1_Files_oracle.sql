@@ -129,9 +129,9 @@ commit;
 
 -- Codes that indicate a positive COVID-19 test result (use either option #1 and/or option #2)
 -- COVID-19 Positive Option #1: individual concept_cd values
---insert into  COVID_CODE_MAP
---	select 'covidpos', 'COVID-xyz-test:POSITIVE' from dual;
---commit;
+    insert into  COVID_CODE_MAP
+	select 'covidpos', 'ICD10CM:U07.1' from dual;
+commit;
 
 -- COVID-19 Positive Option #2: an ontology path (the example here is the COVID ACT "Any Positive Test" path)
 insert into  COVID_CODE_MAP
@@ -352,6 +352,7 @@ commit;
 
 create table covid_lab_scale_factor
 nologging
+parallel
 as
 with cp as 
     (
@@ -415,7 +416,7 @@ parallel
 nologging
 TABLESPACE "COVID"
 as
-select 
+select /*+ parallel*/
 f.ENCOUNTER_NUM ,
 f.PATIENT_NUM ,
 f.CONCEPT_CD ,
@@ -447,7 +448,7 @@ join covid_lab_scale_factor_manual m
     and f.units_cd = m.units_cd
 where f.concept_cd in (select distinct concept_cd from  covid_lab_scale_factor_manual)
 union 
-select 
+select /*+ parallel*/
 f.ENCOUNTER_NUM ,
 f.PATIENT_NUM ,
 f.CONCEPT_CD ,
