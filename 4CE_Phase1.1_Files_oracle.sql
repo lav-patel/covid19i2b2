@@ -24,6 +24,7 @@ WHENEVER SQLERROR CONTINUE;
   drop table covid_diagnoses purge;
   --LP
   drop table covid_lab_scale_factor purge;
+  drop table obs_fact_labs_converted purge;
 WHENEVER SQLERROR EXIT SQL.SQLCODE;
 
 --------------------------------------------------------------------------------
@@ -409,7 +410,6 @@ order by s.concept_cd,s.cnt DESC
 --------------------------------------------------------------------------------------
 -- Create new observation fact which convert labs value to 4CE standards
 --------------------------------------------------------------------------------------
-drop table obs_fact_labs_converted purge;
 create table obs_fact_labs_converted
 parallel
 nologging
