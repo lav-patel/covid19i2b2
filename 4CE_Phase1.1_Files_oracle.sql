@@ -3,27 +3,27 @@ set echo on;
 --Cleanup scripts if necessary
 
 WHENEVER SQLERROR CONTINUE;
-  drop table covid_config;
-  drop table covid_code_map;
-  drop table covid_lab_map;
-  drop table covid_med_map;
-  drop table covid_med_paths;
-  drop table COVID_MED_PATHS_TEMP;
-  drop table COVID_MED_PATHS_TMP2;
-  drop table covid_date_list_temp;
-  drop table covid_demographics_temp;
-  drop table covid_admissions;
-  drop table covid_pos_patients;
-  drop table covid_cohort;
-  drop table covid_severe_patients;
-  drop table covid_demographics;
-  drop table covid_daily_counts;
-  drop table covid_clinical_course;
-  drop table covid_labs;
-  drop table covid_medications;
-  drop table covid_diagnoses;
+  drop table covid_config purge;
+  drop table covid_code_map purge;
+  drop table covid_lab_map purge;
+  drop table covid_med_map purge;
+  drop table covid_med_paths purge;
+  drop table COVID_MED_PATHS_TEMP purge;
+  drop table COVID_MED_PATHS_TMP2 purge;
+  drop table covid_date_list_temp purge;
+  drop table covid_demographics_temp purge;
+  drop table covid_admissions purge;
+  drop table covid_pos_patients purge;
+  drop table covid_cohort purge;
+  drop table covid_severe_patients purge;
+  drop table covid_demographics purge;
+  drop table covid_daily_counts purge;
+  drop table covid_clinical_course purge;
+  drop table covid_labs purge;
+  drop table covid_medications purge;
+  drop table covid_diagnoses purge;
   --LP
-  drop table covid_lab_scale_factor;
+  drop table covid_lab_scale_factor purge;
 WHENEVER SQLERROR EXIT SQL.SQLCODE;
 
 --------------------------------------------------------------------------------
