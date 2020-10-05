@@ -1384,17 +1384,18 @@ commit;
 
 --------------------------------------------------------------------------------
 -- Set the siteid to a unique value for your institution.
--- * Make sure you are not using another institution's siteid.
--- * The siteid must be no more than 20 letters or numbers.
--- * It must start with a letter.
--- * It cannot have any blank spaces or special characters.
+-- Make sure you are not using another institution's siteid.
+-- The siteid must be no more than 20 letters or numbers.
+-- It must start with a letter.
+-- It cannot have any blank spaces or special characters.
 --------------------------------------------------------------------------------
-update covid_daily_counts set siteid = (select siteid from covid_config);commit;
-update covid_clinical_course set siteid = (select siteid from covid_config);commit;
-update covid_demographics set siteid = (select siteid from covid_config);commit;
-update covid_labs set siteid = (select siteid from covid_config);commit;
-update covid_diagnoses set siteid = (select siteid from covid_config);commit;
-update covid_medications set siteid = (select siteid from covid_config);commit;
+update covid_daily_counts set siteid = (select siteid from covid_config);
+update covid_clinical_course set siteid = (select siteid from covid_config); 
+update covid_demographics set siteid = (select siteid from covid_config);
+update covid_labs set siteid = (select siteid from covid_config);
+update covid_diagnoses set siteid = (select siteid from covid_config);
+update covid_medications set siteid = (select siteid from covid_config);
+commit;
 
 select count(*) from covid_daily_counts;
 select count(*) from covid_clinical_course;
