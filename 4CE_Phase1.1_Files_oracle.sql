@@ -137,7 +137,10 @@ commit;
 insert into  COVID_CODE_MAP
 	select distinct 'covidpos', concept_cd
 	from nightherondata.concept_dimension c
-	where concept_path like '\ACT\UMLS_C0031437\SNOMED_3947185011\UMLS_C0022885\UMLS_C1335447\%'
+	where ( concept_path like '\ACT\UMLS_C0031437\SNOMED_3947185011\UMLS_C0022885\UMLS_C1335447\%'
+            or
+            concept_path like '\ACT\UMLS_C0031437\SNOMED_3947185011\UMLS_C0037088\SNOMED_3947183016\ICD10CM_U07.1\%'
+          )
 		and concept_cd is not null
 		and not exists (select * from COVID_CODE_MAP m where m.code='covidpos' and m.local_code=c.concept_cd);
 commit;        
@@ -672,6 +675,7 @@ insert into covid_pos_patients
 			on f.concept_cd = m.local_code and m.code = 'covidpos'
 	group by patient_num;
 --451
+--5,622  rows inserted.
 commit;    
 
 --------------------------------------------------------------------------------
