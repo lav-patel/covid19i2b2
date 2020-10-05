@@ -1382,6 +1382,26 @@ insert into covid_medications
 commit;    
 
 
+--------------------------------------------------------------------------------
+-- Set the siteid to a unique value for your institution.
+-- * Make sure you are not using another institution's siteid.
+-- * The siteid must be no more than 20 letters or numbers.
+-- * It must start with a letter.
+-- * It cannot have any blank spaces or special characters.
+--------------------------------------------------------------------------------
+update covid_daily_counts set siteid = (select siteid from covid_config);commit;
+update covid_clinical_course set siteid = (select siteid from covid_config);commit;
+update covid_demographics set siteid = (select siteid from covid_config);commit;
+update covid_labs set siteid = (select siteid from covid_config);commit;
+update covid_diagnoses set siteid = (select siteid from covid_config);commit;
+update covid_medications set siteid = (select siteid from covid_config);commit;
+
+select count(*) from covid_daily_counts;
+select count(*) from covid_clinical_course;
+select count(*) from covid_demographics;
+select count(*) from covid_labs ;
+select count(*) from covid_diagnoses;
+select count(*) from covid_medications;
 --******************************************************************************
 --******************************************************************************
 --*** Obfuscate as needed (optional)
@@ -1499,7 +1519,20 @@ begin
 end;
 /
 
-select * from dual;
+--******************************************************************************
+--******************************************************************************
+--*** Exit
+--******************************************************************************
+--******************************************************************************
+exit;
+
+--******************************************************************************
+--******************************************************************************
+--*** Exit
+--******************************************************************************
+--******************************************************************************
+
+
 --------------------------------------------------------------------------------
 -- Delete small counts.
 --------------------------------------------------------------------------------
@@ -1523,20 +1556,6 @@ select * from dual;
 --******************************************************************************
 --******************************************************************************
 
---------------------------------------------------------------------------------
--- Set the siteid to a unique value for your institution.
--- * Make sure you are not using another institution's siteid.
--- * The siteid must be no more than 20 letters or numbers.
--- * It must start with a letter.
--- * It cannot have any blank spaces or special characters.
---------------------------------------------------------------------------------
-;
-update covid_daily_counts set siteid = (select siteid from covid_config);commit;
-update covid_clinical_course set siteid = (select siteid from covid_config);commit;
-update covid_demographics set siteid = (select siteid from covid_config);commit;
-update covid_labs set siteid = (select siteid from covid_config);commit;
-update covid_diagnoses set siteid = (select siteid from covid_config);commit;
-update covid_medications set siteid = (select siteid from covid_config);commit;
 
 --------------------------------------------------------------------------------
 -- OPTION #1: View the data as tables.
@@ -1544,12 +1563,6 @@ update covid_medications set siteid = (select siteid from covid_config);commit;
 -- * Copy into Excel, convert dates into YYYY-MM-DD format, save in csv format.
 -- ORACLE: BEGIN/END block does not work unless directly spooling to file or running each select individually
 --------------------------------------------------------------------------------
-select count(*) from covid_daily_counts;
-select count(*) from covid_clinical_course;
-select count(*) from covid_demographics;
-select count(*) from covid_labs ;
-select count(*) from covid_diagnoses;
-select count(*) from covid_medications;
 /*
 declare
     v_output_as_columns numeric(8,0);
