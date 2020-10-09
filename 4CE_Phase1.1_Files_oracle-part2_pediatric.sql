@@ -23,7 +23,7 @@ WHENEVER SQLERROR EXIT SQL.SQLCODE;
 
 -- reducing OBFUSCATION for pediatric
 UPDATE "COVID_CONFIG" 
-SET OBFUSCATION_SMALL_COUNT_MASK = '0' 
+SET OBFUSCATION_SMALL_COUNT_MASK = '3' 
 WHERE siteid= 'KUMC';
 commit;
 select *  from covid_config;
