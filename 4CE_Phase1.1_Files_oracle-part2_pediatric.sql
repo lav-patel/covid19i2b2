@@ -25,8 +25,13 @@ WHENEVER SQLERROR EXIT SQL.SQLCODE;
 UPDATE "COVID_CONFIG" 
 SET OBFUSCATION_SMALL_COUNT_MASK = '3' 
 WHERE siteid= 'KUMC';
+
+UPDATE "COVID_CONFIG" 
+SET siteid = 'KUMCPED' 
+WHERE siteid= 'KUMC';
+
 commit;
-select *  from covid_config;
+
 
 --------------------------------------------------------------------------------
 -- Medication mappings
