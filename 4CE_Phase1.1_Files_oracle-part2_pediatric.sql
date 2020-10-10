@@ -511,7 +511,8 @@ insert into covid_demographics_temp (patient_num, age_group)
 			-- when floor(months_between(sysdate, birth_date)/12) between 50 and 69 then '50to69'
 			-- when floor(months_between(sysdate, birth_date)/12) between 70 and 79 then '70to79'
 			-- when floor(months_between(sysdate, birth_date)/12) >= 80 then '80plus'
-			else 'other' end) age
+			-- else 'other'
+		end) age
 	from nightherondata.patient_dimension
 	where patient_num in (select patient_num from covid_cohort);
 commit;    
