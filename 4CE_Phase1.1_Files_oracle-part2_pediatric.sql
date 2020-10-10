@@ -216,14 +216,26 @@ create table covid_pos_patients (
     constraint covid_pospatients_pk primary key (patient_num, covid_pos_date)
 );
 
-insert into covid_pos_patients
-	select patient_num, cast(min(start_date) as date) covid_pos_date
+truncate table covid_pos_patients;
+insert into /*+ parallel */ covid_pos_patients
+    with ped_cohort as 
+        (
+            select /*+ parallel */
+            *
+            from nightherondata.patient_dimension
+            where floor(months_between(sysdate, birth_date)/12) between 0 and 20 
+        )
+    select /*+ parallel */
+    f.patient_num, cast(min(start_date) as date) covid_pos_date
 	from nightherondata.observation_fact f
 		inner join covid_code_map m
 			on f.concept_cd = m.local_code and m.code = 'covidpos'
-	group by patient_num;
+        inner join ped_cohort ped
+            on f.patient_num = ped.patient_num
+	group by f.patient_num;
 --451
---5,622  rows inserted.
+--All pos 5,622  rows inserted.
+--pediatric 743 rows inserted
 commit;    
 
 --------------------------------------------------------------------------------
