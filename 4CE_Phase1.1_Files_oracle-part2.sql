@@ -38,7 +38,7 @@ create table COVID_MED_MAP (
 -- ALTER TABLE COVID_MED_MAP MODIFY code_type VARCHAR (20  );
 -- ATC codes (optional)
 -- Use Rxnorm
---insert into COVID_MED_MAP
+--insert /*+ append */ into  COVID_MED_MAP
 --	select m, 'ATC' t, 'ATC:'||c  -- Change "ATC:" to your local ATC code prefix (scheme)
 --	from (
 --		-- Don't add or remove drugs
@@ -60,7 +60,7 @@ create table COVID_MED_MAP (
 -- Change "RxNorm:" to your local RxNorm code prefix (scheme)
 -- Don't add or remove drugs
 --sqlplus dont like line bigger than 2499
-insert into COVID_MED_MAP
+insert /*+ append */ into  COVID_MED_MAP
 	select m, 'RXNORM' t, 'RXNORM:'||c  
 	from (
 		select 'ACEI' m, c from (select '36908' c from dual union select '39990' from dual union select '104375' from dual union select '104376' from dual union select '104377' from dual union select '104378' from dual union select '104383' from dual union select '104384' from dual union select '104385' from dual union select '1299896' from dual union select '1299897' from dual union select '1299963' from dual union select '1299965' from dual union select '1435623' from dual union select '1435624' from dual union select '1435630' from dual union select '1806883' from dual union select '1806884' from dual union select '1806890' from dual union select '18867' from dual union select '197884' from dual union select '198187' from dual union select '198188' from dual union select '198189' from dual union select '199351' from dual union select '199352' from dual union select '199353' from dual union select '199622' from dual union select '199707' from dual union select '199708' from dual union select '199709' from dual union select '1998' from dual union select '199816' from dual union select '199817' from dual union select '199931' from dual union select '199937' from dual union select '205326' from dual union select '205707' from dual union select '205778' from dual union select '205779' from dual union select '205780' from dual union select '205781' from dual union select '206277' from dual union select '206313' from dual union select '206764' from dual union select '206765' from dual union select '206766' from dual union select '206771' from dual union select '207780' from dual union select '207792' from dual union select '207800' from dual union select '207820' from dual union select '207891' from dual union select '207892' from dual union select '207893' from dual union select '207895' from dual union select '210671' from dual union select '210672' from dual union select '210673' from dual union select '21102' from dual union select '211535' from dual union select '213482' from dual union select '247516' from dual union select '251856' from dual union select '251857' from dual union select '260333' from dual union select '261257' from dual union select '261258' from dual union select '261962' from dual union select '262076' from dual union select '29046' from dual union select '30131' from dual union select '308607' from dual union select '308609' from dual union select '308612' from dual union select '308613' from dual union select '308962' from dual 
@@ -98,7 +98,7 @@ commit;
 252863	(INV) REMDESIVIR (HSC ######) IVPB
 -- TODO: Bring Remdesivir to HERON as they are not brought to heron from clairty.
 */
---insert into COVID_MED_MAP
+--insert /*+ append */ into  COVID_MED_MAP
 --	select 'REMDESIVIR', 'RXNORM', 'RXNORM:2284718' from dual 
 --        union 
 --    select 'REMDESIVIR', 'RXNORM', 'RXNORM:2284960' from dual 
@@ -137,7 +137,7 @@ alter table COVID_MED_PATHS add med_class varchar(50);
 create table COVID_MED_PATHS_TEMP
 as
 select * from COVID_MED_PATHS where 1=0;
-insert into COVID_MED_PATHS_TEMP
+insert /*+ append */ into  COVID_MED_PATHS_TEMP
 	select distinct 
 --    'Expand',
     c.concept_path ||m.local_med_code ,
@@ -164,7 +164,7 @@ from COVID_MED_PATHS_TEMP
 group by concept_path,concept_cd,med_class;
 --alter table COVID_MED_PATHS_TEMP2 add constraint COVID_MEDPATHS2_PK primary key (concept_path);
 
-insert into COVID_MED_PATHS
+insert /*+ append */ into  COVID_MED_PATHS
 select 
 concept_path || concept_cd as concept_path,
 concept_cd,
@@ -173,7 +173,7 @@ from COVID_MED_PATHS_TMP2;
 where concept_path not in (select concept_path from COVID_MED_PATHS);
 
 -- insert mapping into covid_med_map
-insert into COVID_MED_MAP
+insert /*+ append */ into  COVID_MED_MAP
 select distinct
 med_class
 ,REGEXP_SUBSTR(concept_cd, '[^:]+') as code_type
@@ -210,7 +210,7 @@ create table covid_pos_patients (
     constraint covid_pospatients_pk primary key (patient_num, covid_pos_date)
 );
 
-insert into covid_pos_patients
+insert /*+ append */ into  covid_pos_patients
 	select patient_num, cast(min(start_date) as date) covid_pos_date
 	from nightherondata.observation_fact f
 		inner join covid_code_map m
@@ -231,7 +231,7 @@ create table covid_admissions (
     constraint covid_admissions primary key (patient_num, admission_date, discharge_date)
 );
 
-insert into covid_admissions
+insert /*+ append */ into  covid_admissions
     select distinct
     v.patient_num
     , cast(start_date as date)
@@ -272,7 +272,7 @@ create table covid_cohort (
     constraint covid_cohort primary key (patient_num)
 );
 
-insert into covid_cohort
+insert /*+ append */ into  covid_cohort
 	select p.patient_num, min(admission_date) admission_date, 0, null, null
 	from covid_pos_patients p
 		inner join covid_admissions a
@@ -470,7 +470,7 @@ create table covid_demographics_temp (
 	race varchar(30)
 );
 -- Get patients' sex
-insert into covid_demographics_temp (patient_num, sex)
+insert /*+ append */ into  covid_demographics_temp (patient_num, sex)
 	select patient_num, m.code
 	from nightherondata.patient_dimension p
 		inner join covid_code_map m
@@ -479,7 +479,7 @@ insert into covid_demographics_temp (patient_num, sex)
 	where patient_num in (select patient_num from covid_cohort);
 commit;    
 -- Get patients' age
-insert into covid_demographics_temp (patient_num, age_group)
+insert /*+ append */ into  covid_demographics_temp (patient_num, age_group)
 	select patient_num,
         -- uncomment if you pre-compute age on patient_dimension
 		/*(case
@@ -509,7 +509,7 @@ insert into covid_demographics_temp (patient_num, age_group)
 commit;    
 -- Get patients' race(s)
 -- (race from patient_dimension)
-insert into covid_demographics_temp (patient_num, race)
+insert /*+ append */ into  covid_demographics_temp (patient_num, race)
 	select p.patient_num, m.code
 	from covid_config x
 		cross join nightherondata.patient_dimension p
@@ -527,7 +527,7 @@ insert into covid_demographics_temp (patient_num, race)
 commit;
 
 -- (race from observation_fact)
-insert into covid_demographics_temp (patient_num, race)
+insert /*+ append */ into  covid_demographics_temp (patient_num, race)
 	select f.patient_num, m.code
 	from covid_config x
 		cross join nightherondata.observation_fact f
@@ -544,7 +544,7 @@ insert into covid_demographics_temp (patient_num, race)
 --133
 commit;        
 -- Make sure every patient has a sex, age_group, and race
-insert into covid_demographics_temp (patient_num, sex, age_group, race)
+insert /*+ append */ into  covid_demographics_temp (patient_num, sex, age_group, race)
 	select patient_num, 'other', null, null
 		from covid_cohort
 		where patient_num not in (select patient_num from covid_demographics_temp where sex is not null)
@@ -579,7 +579,7 @@ create table covid_daily_counts (
     constraint covid_dlycounts_pk primary key (calendar_date)
 );
 
-insert into covid_daily_counts
+insert /*+ append */ into  covid_daily_counts
 	select 'KUMC' siteid, d.*,
 		(select count(distinct c.patient_num)
 			from covid_admissions p
@@ -625,7 +625,7 @@ create table covid_clinical_course (
 	num_pat_ever_severe_cur_hosp numeric(8,0),  --num_patients_ever_severe_still_in_hospital: shortened to under 128 bytes
     constraint covid_clinicalcourse_pk primary key (days_since_admission)
 );
-insert into covid_clinical_course
+insert /*+ append */ into  covid_clinical_course
 	select 'KUMC' siteid, days_since_admission, 
 		count(*),
 		sum(severe)
@@ -657,7 +657,7 @@ create table covid_demographics (
 	num_patients_ever_severe numeric(8,0),
     constraint covid_demographics_pk primary key (sex, age_group, race)
 );
-insert into covid_demographics
+insert /*+ append */ into  covid_demographics
 	select 'KUMC' siteid, sex, age_group, race, count(*), sum(severe)
 	from covid_cohort c
 		inner join (
@@ -705,7 +705,7 @@ create table covid_labs (
 	stdev_log_value_ever_severe float,
     constraint covid_labs_pk primary key (loinc, days_since_admission)
 );
-insert into covid_labs
+insert /*+ append */ into  covid_labs
 	select 'KUMC' siteid, loinc, days_since_admission, lab_units,
 		count(*), 
 		avg(val), 
@@ -859,7 +859,7 @@ create table covid_diagnoses (
 	num_pat_ever_severe_since_adm numeric(8,0), --num_patients_ever_severe_since_admission: shortened to under 128 bytes
     constraint covid_diagnoses_pk primary key (icd_code_3chars, icd_version)
 );
-insert into covid_diagnoses
+insert /*+ append */ into  covid_diagnoses
 	select 'KUMC' siteid, icd_code_3chars, icd_version,
 		sum(before_admission), 
 		sum(since_admission), 
@@ -917,7 +917,7 @@ create table covid_medications (
 	num_pat_ever_severe_since_adm numeric(8,0), --num_patients_ever_severe_since_admission: shortened to under 128 bytes
     constraint covid_medications primary key (med_class)
 );
-insert into covid_medications
+insert /*+ append */ into  covid_medications
 	select 'KUMC' siteid, med_class,
 		sum(before_admission), 
 		sum(since_admission), 
