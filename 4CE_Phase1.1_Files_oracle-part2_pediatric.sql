@@ -147,6 +147,7 @@ alter table COVID_MED_PATHS add med_class varchar(50);
 
 create table COVID_MED_PATHS_TEMP
 nologging parallel
+TABLESPACE "COVID"
 as
 --select * from COVID_MED_PATHS where 1=0;
 --insert /*+ append */ into  COVID_MED_PATHS_TEMP
