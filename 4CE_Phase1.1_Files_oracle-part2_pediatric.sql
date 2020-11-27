@@ -20,6 +20,8 @@ WHENEVER SQLERROR CONTINUE;
   drop table covid_labs purge;
   drop table covid_medications purge;
   drop table covid_diagnoses purge;
+  drop table icd9_map purge;
+  drop table icd_map purge;
 WHENEVER SQLERROR EXIT SQL.SQLCODE;
 
 -- reducing OBFUSCATION for pediatric
@@ -812,7 +814,7 @@ or cd1.concept_cd like'ICD9%';
 --; 
 --select *
 --from icd9_map;
-drop table icd9_map purge;
+
 create table icd9_map
 as
 select c_basecode dx_id,pcori_basecode icd9
@@ -822,7 +824,7 @@ and  pcornet_diag.c_fullname like '\PCORI\DIAGNOSIS\09%' ;
 --select * from icd9_map;
 
 
-drop table icd_map purge;
+
 create table icd_map
 nologging parallel
 TABLESPACE "COVID"
