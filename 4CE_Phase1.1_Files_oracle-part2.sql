@@ -143,7 +143,7 @@ as
 --    'Expand',
     c.concept_path ||m.local_med_code CONCEPT_PATH,
     d.concept_cd CONCEPT_CD,
-	 m.med_class MED_CLASS
+	m.med_class MED_CLASS
 	from COVID_MED_MAP m
 		inner join nightherondata.concept_dimension c
 			on m.local_med_code = c.concept_cd
