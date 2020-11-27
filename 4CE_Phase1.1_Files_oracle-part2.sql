@@ -182,7 +182,8 @@ concept_path || concept_cd as concept_path,
 concept_cd,
 med_class
 from COVID_MED_PATHS_TMP2;
-where concept_path not in (select concept_path from COVID_MED_PATHS);
+--where concept_path not in (select concept_path from COVID_MED_PATHS);
+commit;
 
 -- insert mapping into covid_med_map
 insert /*+ append */ into  COVID_MED_MAP
