@@ -20,8 +20,6 @@ WHENEVER SQLERROR CONTINUE;
   drop table covid_labs purge;
   drop table covid_medications purge;
   drop table covid_diagnoses purge;
-  drop table icd9_map purge;
-  drop table icd_map purge;
 WHENEVER SQLERROR EXIT SQL.SQLCODE;
 
 -- reducing OBFUSCATION for pediatric
@@ -322,6 +320,11 @@ commit;
 --------------------------------------------------------------------------------
 -- ICD mapping
 --------------------------------------------------------------------------------
+WHENEVER SQLERROR CONTINUE;
+  drop table cd1 purge;
+  drop table icd_map purge;
+WHENEVER SQLERROR EXIT SQL.SQLCODE;
+
 drop table cd1;
 create table cd1
 as
@@ -814,6 +817,10 @@ or cd1.concept_cd like'ICD9%';
 --; 
 --select *
 --from icd9_map;
+WHENEVER SQLERROR CONTINUE;
+  drop table icd9_map purge;
+  drop table icd_map purge;
+WHENEVER SQLERROR EXIT SQL.SQLCODE;
 
 create table icd9_map
 as
