@@ -308,6 +308,8 @@ or cd1.concept_cd like'ICD9%';
 
 drop table ICD_map;
 create table ICD_map
+nologging parallel
+TABLESPACE "COVID"
 as
 select cd1.concept_cd ICD,cd2.concept_cd local_term
 from cd1
@@ -796,6 +798,8 @@ and  pcornet_diag.c_fullname like '\PCORI\DIAGNOSIS\09%' ;
 
 drop table icd_map purge;
 create table icd_map
+nologging parallel
+TABLESPACE "COVID"
 as
 select c_basecode dx_id,pcori_basecode icd10
 from nightherondata.pcornet_diag
