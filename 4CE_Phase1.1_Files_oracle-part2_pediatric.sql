@@ -166,7 +166,7 @@ as
     d.concept_cd CONCEPT_CD,
 	m.med_class MED_CLASS
 	from COVID_MED_MAP m
-		inner join nightherondata.concept_dimension_med c
+		inner join concept_dimension_med c
 			on m.local_med_code = c.concept_cd
 		inner join COVID_MED_PATHS d
 			on d.concept_path like c.concept_path||'%'
