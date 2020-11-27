@@ -5,6 +5,7 @@ set echo on;
 WHENEVER SQLERROR CONTINUE;
   drop table covid_med_map purge;
   drop table covid_med_paths purge;
+  drop table concept_dimension_med purge;
   drop table COVID_MED_PATHS_TEMP purge;
   drop table COVID_MED_PATHS_TMP2 purge;
   drop table covid_date_list_temp purge;
@@ -133,6 +134,15 @@ alter table COVID_MED_PATHS add med_class varchar(50);
 -------------------------------------------------------
 -- COVID_MED_PATHS_TEMP
 -------------------------------------------------------
+create table concept_dimension_med
+nologging parallel
+as
+select * from nightherondata.concept_dimension
+where concept_path like '\ACT\Medications\MedicationsByAlpha\V2_12112018\RxNormUMLSRxNav\%'
+   or concept_path like '\ACT\Medications\MedicationsByVaClass\V2_09302018\%'
+;
+CREATE UNIQUE INDEX CONCEPT_PATH_IDX ON CONCEPT_DIMENSION_MED (CONCEPT_PATH ASC);
+CREATE BITMAP INDEX CONCEPT_CD_IDX ON CONCEPT_DIMENSION_MED (CONCEPT_CD ASC);
 
 create table COVID_MED_PATHS_TEMP
 nologging parallel
@@ -145,7 +155,7 @@ as
     d.concept_cd CONCEPT_CD,
 	m.med_class MED_CLASS
 	from COVID_MED_MAP m
-		inner join nightherondata.concept_dimension c
+		inner join nightherondata.concept_dimension_med c
 			on m.local_med_code = c.concept_cd
 		inner join COVID_MED_PATHS d
 			on d.concept_path like c.concept_path||'%'
