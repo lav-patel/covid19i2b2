@@ -304,6 +304,8 @@ WHENEVER SQLERROR EXIT SQL.SQLCODE;
 
 
 create table cd1
+nologging parallel
+TABLESPACE "COVID"
 as
  select * 
 from nightherondata.concept_dimension cd1
