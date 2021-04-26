@@ -8,17 +8,17 @@ sqlplus $USER_NAME/$USER_PASSWORD@$ORACLE_SID @covid_labs.sql
 sqlplus $USER_NAME/$USER_PASSWORD@$ORACLE_SID @covid_medications.sql
 
 
-sed -i 1i"SITEID,DAYS_SINCE_ADMISSION,NUM_PATIENTS_ALL_STILL_IN_HOSPITAL,NUM_PATIENTS_EVER_SEVERE_STILL_IN_HOSPITAL" ClinicalCourse-${SITEID}.csv
+sed -i 1i"siteid,days_since_admission,num_patients_all_still_in_hospital,num_patients_ever_severe_still_in_hospital" ClinicalCourse-${SITEID}.csv
 
-sed -i 1i"SITEID,CALENDAR_DATE,CUMULATIVE_PATIENTS_ALL,CUMULATIVE_PATIENTS_SEVERE,CUMULATIVE_PATIENTS_DEAD,NUM_PATIENTS_IN_HOSPITAL_ON_THIS_DATE,NUM_PATIENTS_IN_HOSPITAL_AND_SEVERE_ON_THIS_DATE" DailyCounts-${SITEID}.csv
+sed -i 1i"siteid,calendar_date,cumulative_patients_all,cumulative_patients_severe,cumulative_patients_dead,num_patients_in_hospital_on_this_date,num_patients_in_hospital_and_severe_on_this_date" DailyCounts-${SITEID}.csv
 
-sed -i 1i"SITEID,SEX,AGE_GROUP,RACE,NUM_PATIENTS_ALL,NUM_PATIENTS_EVER_SEVERE" Demographics-${SITEID}.csv
+sed -i 1i"siteid,sex,age_group,race,num_patients_all,num_patients_ever_severe" Demographics-${SITEID}.csv
 
-sed -i 1i"SITEID,ICD_CODE_3CHARS,ICD_VERSION,NUM_PATIENTS_ALL_BEFORE_ADMISSION,NUM_PATIENTS_ALL_SINCE_ADMISSION,NUM_PATIENTS_EVER_SEVERE_BEFORE_ADMISSION,NUM_PATIENTS_EVER_SEVERE_SINCE_ADMISSION" Diagnoses-${SITEID}.csv
+sed -i 1i"siteid,icd_code_3chars,icd_version,num_patients_all_before_admission,num_patients_all_since_admission,num_patients_ever_severe_before_admission,num_patients_ever_severe_since_admission" Diagnoses-${SITEID}.csv
 
-sed -i 1i"SITEID,LOINC,DAYS_SINCE_ADMISSION,UNITS,NUM_PATIENTS_ALL,MEAN_VALUE_ALL,STDEV_VALUE_ALL,MEAN_LOG_VALUE_ALL,STDEV_LOG_VALUE_ALL,NUM_PATIENTS_EVER_SEVERE,MEAN_VALUE_EVER_SEVERE,STDEV_VALUE_EVER_SEVERE,MEAN_LOG_VALUE_EVER_SEVERE,STDEV_LOG_VALUE_EVER_SEVERE" Labs-${SITEID}.csv
+sed -i 1i"siteid,loinc,days_since_admission,units,num_patients_all,mean_value_all,stdev_value_all,mean_log_value_all,stdev_log_value_all,num_patients_ever_severe,mean_value_ever_severe,stdev_value_ever_severe,mean_log_value_ever_severe,stdev_log_value_ever_severe" Labs-${SITEID}.csv
 
-sed -i 1i"SITEID,MED_CLASS,NUM_PATIENTS_ALL_BEFORE_ADMISSION,NUM_PATIENTS_ALL_SINCE_ADMISSION,NUM_PATIENTS_EVER_SEVERE_BEFORE_ADMISSION,NUM_PATIENTS_EVER_SEVERE_SINCE_ADMISSION" Medications-${SITEID}.csv
+sed -i 1i"siteid,med_class,num_patients_all_before_admission,num_patients_all_since_admission,num_patients_ever_severe_before_admission,num_patients_ever_severe_since_admission" Medications-${SITEID}.csv
 
 exit 0
 # code to generate sql for export and header
